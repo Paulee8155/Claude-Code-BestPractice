@@ -1,0 +1,26 @@
+# Claude Code personal settings (machine-specific, not for version control)
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Node (if scripts are added later)
+node_modules/
+
+# Python (if scripts are added later)
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git stash*)",
+      "Bash(git show*)",
+      "Bash(find . *)",
+      "Bash(ls*)",
+      "Bash(cat*)",
+      "Bash(grep*)",
+      "Bash(echo*)",
+      "Bash(mkdir*)",
+      "Bash(cp*)",
+      "Bash(mv*)",
+      "Bash(touch*)",
+      "Bash(which*)",
+      "Bash(pwd)",
+      "Bash(env)",
+      "Bash(printenv*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(chmod -R 777*)",
+      "Bash(sudo rm*)"
+    ]
+  },
+  "autoCompactThreshold": 0.8,
+  "enableAllProjectMcpServers": true,
+  "respectGitignore": true,
+  "cleanupPeriodDays": 30,
+  "env": {}
+}
