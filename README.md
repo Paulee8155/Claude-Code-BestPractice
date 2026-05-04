@@ -35,7 +35,26 @@ rm -rf .git
 git init
 ```
 
-### 2. Install context-mode plugin
+### 2. Install rtk (Rust Token Killer)
+
+rtk compresses Bash command output by 60-90%, saving significant token costs on every session. It is wired into the global Claude Code hook automatically once installed.
+
+```bash
+# Install rtk
+curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+
+# Add to PATH (add to ~/.bashrc or ~/.zshrc for persistence)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Register the global Claude Code hook (one-time setup)
+rtk init -g --auto-patch
+```
+
+After installation, restart Claude Code. rtk activates automatically for all Bash commands.
+
+**Verify savings:** run `rtk gain` in the terminal after a session.
+
+### 3. Install context-mode plugin
 
 context-mode provides automatic session continuity and context-efficient tool routing. It is required for the harness to work correctly.
 
@@ -52,13 +71,13 @@ Verify installation:
 ```
 All checks must show `[x]`.
 
-### 3. Fill in project-specific files
+### 4. Fill in project-specific files
 
 1. **`PROJECT_RULES.md`** — Fill in your tech stack, conventions, and constraints
 2. **`.claude/templates/project-profile.md`** — One-page project summary
 3. **`.claude/templates/tech-stack.md`** — Detailed stack reference
 
-### 4. Start Claude Code
+### 5. Start Claude Code
 
 ```bash
 claude

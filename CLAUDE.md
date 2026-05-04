@@ -189,3 +189,7 @@ scripts/               ← Utility scripts
 
 Keep this file and all descendant CLAUDE.md files under 200 lines.
 Move detailed rules to `.claude/rules/` with `paths:` frontmatter for lazy loading.
+
+RTK (Rust Token Killer) is active globally. Always prefix Bash commands with `rtk` for 60-90% token savings.
+Full command reference: `.claude/rules/rtk.md` — run `rtk gain` to check savings.
+<!-- /rtk-instructions -->
