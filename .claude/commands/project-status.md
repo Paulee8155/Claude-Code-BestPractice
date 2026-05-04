@@ -1,50 +1,39 @@
 ---
-description: Summarize the current state of the project — git status, in-progress tasks, recent changes, and next steps.
+description: Summarize the current project state — git status, active tasks, recent changes, next steps, open risks.
+allowed-tools: Bash, Read
 ---
 
 # /project-status
 
-Produce a current project status summary.
+Gather and report the current project state in one pass.
 
-## Gather Information
+```bash
+rtk git status
+rtk git log --oneline -10
+```
 
-Run the following in parallel:
+Then read in parallel: `state/context.md` · `state/tasks.md` · `state/progress.md`
 
-1. `git status` — uncommitted changes
-2. `git log --oneline -10` — recent commits
-3. Read `docs/tasks.md` — in-progress and pending tasks
-4. Read `docs/context.md` — session handoff notes
-5. Read `docs/progress.md` — milestone progress
-
-## Output Format
+## Output
 
 ```
-## Project Status — [date]
+## Status — [date]
 
-### Git State
-- Branch: [current branch]
-- Uncommitted changes: [count] files
-- Last commit: [message] ([time ago])
+### Git
+- Branch: [branch] · Uncommitted: [N files] · Last commit: [msg]
 
 ### In Progress
-- [Task name] — [status / blocker]
+- [Task] — [status / blocker]
 
-### Pending
-- [Task name] — [priority]
+### Pending (top 3)
+- [Task] — [priority]
 
-### Recently Completed
-- [Task] — [commit reference]
-
-### Blockers
-- [Blocker] — [who/what is needed]
+### Open Risks
+- [Risk] — [mitigation or owner]
 
 ### Next Steps
-1. [Most important next action]
-2. [Second next action]
+1. [Most important action]
+2. [Second action]
 ```
 
-## After Summarizing
-
-If there are uncommitted changes that should be committed, offer to commit them.
-If `docs/tasks.md` is stale, offer to update it.
-If context notes are outdated, offer to refresh them.
+Update `state/tasks.md` if stale. Offer to commit loose changes.
