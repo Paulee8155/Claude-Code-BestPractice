@@ -29,28 +29,34 @@ Built on:
 
 ---
 
-## Use case 1 — New project
+## Use case 1 — New project (zero-touch via master-prompt)
 
+The fastest path: **paste a master-prompt** into a fresh Claude Code session in
+your empty target directory. Claude then verifies tools, installs missing ones
+(with your confirmation), clones the harness, runs `setup.sh`, and verifies.
+
+→ [`prompts/master-setup-new-project.md`](prompts/master-setup-new-project.md)
+
+Manual alternative (if you prefer to drive it yourself):
 ```bash
 cp -r /path/to/this-harness/. /path/to/your-new-project/
 cd /path/to/your-new-project
 ./scripts/setup.sh        # interactive: tools check + fill PROJECT_RULES.md
-# Open Claude Code, start working.
 ```
 
-`setup.sh` verifies RTK + Bun + claude-mem, asks for project name + stack,
-fills `PROJECT_RULES.md`, initialises `state/`. Idempotent.
+## Use case 2 — Existing project (zero-touch via master-prompt)
 
-## Use case 2 — Existing project
+Same idea but for an existing codebase. Claude scans your real project,
+runs `adopt.sh` (with backup), then `/adopt-project` to fill PROJECT_RULES,
+state/, and project-specific rules from verified facts in your code.
 
+→ [`prompts/master-setup-existing-project.md`](prompts/master-setup-existing-project.md)
+
+Manual alternative:
 ```bash
 ./scripts/adopt.sh /path/to/your/existing/project
-# adopt.sh copies harness in, backs up any conflicts to .harness-backup/<ts>/
 cd /path/to/your/existing/project
-# Open Claude Code, then run:
-/adopt-project
-# Claude reads your real codebase and fills PROJECT_RULES.md, state/,
-# .claude/rules/ from verified facts — no placeholders, no guesses.
+# In Claude Code:  /adopt-project
 ```
 
 ## Use case 3 — Parallel feature work (worktrees)
@@ -140,6 +146,11 @@ scripts/
     adopt.sh                       # adopt existing project
     worktree.sh                    # parallel feature checkouts
     verify-harness.sh              # self-check
+
+prompts/
+    master-setup-new-project.md         # paste-and-run for new projects
+    master-setup-existing-project.md    # paste-and-run for existing projects
+    README.md                            # which prompt to use when
 ```
 
 ---
@@ -160,8 +171,10 @@ All toggles in `.claude/hooks/config/hooks-config.json` (or `.local.json` per ma
 
 | Need | Action |
 |---|---|
-| New project setup | `./scripts/setup.sh` |
-| Adopt existing project | `./scripts/adopt.sh /path/to/project` then `/adopt-project` in Claude |
+| New project — autonomous setup | Paste [`prompts/master-setup-new-project.md`](prompts/master-setup-new-project.md) into Claude |
+| Existing project — autonomous setup | Paste [`prompts/master-setup-existing-project.md`](prompts/master-setup-existing-project.md) into Claude |
+| New project — manual | `./scripts/setup.sh` |
+| Existing project — manual | `./scripts/adopt.sh /path/to/project` then `/adopt-project` in Claude |
 | Parallel branch work | `./scripts/worktree.sh add <branch>` |
 | Verify the harness | `./scripts/verify-harness.sh` |
 | Plan a feature | `/rpi:plan` (or `/rpi:research` first if uncertain) |
