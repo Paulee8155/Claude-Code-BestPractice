@@ -4,10 +4,12 @@ Zwei copy-paste Prompts die du in eine frische Claude Code Session pasten kannst
 
 ## Welchen Prompt nutze ich?
 
-| Situation | Prompt |
-|---|---|
-| Leeres Verzeichnis oder fast leer (max .git/.gitignore/README) — du startest ein neues Projekt | [`master-setup-new-project.md`](master-setup-new-project.md) |
-| Bestehende Codebase mit echten Files (egal welche Sprache/Framework) — du willst das Harness drüber legen ohne was kaputt zu machen | [`master-setup-existing-project.md`](master-setup-existing-project.md) |
+| Situation | Deutsch | English |
+|---|---|---|
+| Leeres Verzeichnis oder fast leer (max .git/.gitignore/README) — du startest ein neues Projekt | [`master-setup-new-project.md`](master-setup-new-project.md) | [`master-setup-new-project.en.md`](master-setup-new-project.en.md) |
+| Bestehende Codebase mit echten Files (egal welche Sprache/Framework) — du willst das Harness drüber legen ohne was kaputt zu machen | [`master-setup-existing-project.md`](master-setup-existing-project.md) | [`master-setup-existing-project.en.md`](master-setup-existing-project.en.md) |
+
+> Note: the German prompts are the source of truth. English versions are 1:1 translations kept in sync.
 
 ## Wie nutze ich sie?
 

@@ -7,14 +7,14 @@
   "disablePostToolUseHook": false,
   "disablePostToolUseFailureHook": true,
   "disablePermissionRequestHook": true,
-  "disableUserPromptSubmitHook": true,
+  "disableUserPromptSubmitHook": false,
   "disableNotificationHook": true,
   "disableStopHook": false,
   "disableSubagentStartHook": true,
   "disableSubagentStopHook": true,
   "disablePreCompactHook": true,
   "disablePostCompactHook": true,
-  "disableSessionStartHook": true,
+  "disableSessionStartHook": false,
   "disableSessionEndHook": true,
   "disableSetupHook": true,
   "disableTeammateIdleHook": true,
@@ -31,12 +31,15 @@
   "disableFileChangedHook": true,
   "disablePermissionDeniedHook": true,
 
-  "_safety": "PreToolUse runs block-destructive + protect-secrets. PostToolUse runs auto-format (best-effort, silent if formatter missing). Stop prints a verification reminder.",
+  "_safety": "PreToolUse runs block-destructive + protect-secrets. PostToolUse runs auto-format (best-effort, silent if formatter missing). Stop prints a verification reminder (gated when no active task). SessionStart injects branch + state context. UserPromptSubmit nudges if PROJECT_RULES.md is still a template.",
   "safety": {
     "blockDestructive": true,
     "protectSecrets": true,
     "autoFormat": true,
-    "verificationReminder": true
+    "verificationReminder": true,
+    "verificationReminderQuietWhenIdle": true,
+    "sessionContextLoad": true,
+    "projectRulesNudge": true
   },
 
   "_log": "When disableLogging is false, hook events are appended to .claude/hooks/log.jsonl",

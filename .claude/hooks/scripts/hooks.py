@@ -87,6 +87,11 @@ DESTRUCTIVE_PATTERNS = [
     "> /dev/",
     "DROP TABLE", "drop table",
     "DROP DATABASE", "drop database",
+    ":(){ :|:& };:",
+    "mkfs",
+    "find / -delete",
+    "find . -delete",
+    "shred -",
 ]
 
 
@@ -208,7 +213,126 @@ def handle_PostToolUse(payload: dict, cfg: dict) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Verification reminder (Stop event)
+# Session context: marker files for gating + activity tracking
+# ---------------------------------------------------------------------------
+
+SESSION_ACTIVE_MARKER = REPO_ROOT / ".claude/hooks/.session-active"
+RULES_WARNED_MARKER = REPO_ROOT / ".claude/hooks/.rules-warned"
+
+
+def _read_head(path: Path, max_lines: int) -> list[str]:
+    if not path.is_file():
+        return []
+    out: list[str] = []
+    try:
+        with path.open() as f:
+            for line in f:
+                line = line.rstrip()
+                if not line:
+                    continue
+                out.append(line)
+                if len(out) >= max_lines:
+                    break
+    except OSError:
+        return []
+    return out
+
+
+def _git_summary() -> tuple[str, int]:
+    branch = "no-git"
+    modified = 0
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=2,
+        )
+        if r.returncode == 0:
+            branch = r.stdout.strip() or branch
+        r2 = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=2,
+        )
+        if r2.returncode == 0:
+            modified = sum(1 for ln in r2.stdout.splitlines() if ln.strip())
+    except Exception:
+        pass
+    return branch, modified
+
+
+def _build_session_context(source: str) -> str:
+    branch, modified = _git_summary()
+    if source == "compact":
+        return f"## Session-Kontext\nBranch: {branch} · Modified: {modified} files"
+
+    tasks = _read_head(REPO_ROOT / "state/tasks.md", 5)
+    ctx = _read_head(REPO_ROOT / "state/context.md", 2)
+
+    parts = [f"## Session-Kontext\nBranch: {branch} · Modified: {modified} files"]
+    if tasks:
+        parts.append("Aktueller Fokus (state/tasks.md):\n" + "\n".join(tasks))
+    if ctx:
+        parts.append("Projekt (state/context.md):\n" + "\n".join(ctx))
+    return "\n\n".join(parts)
+
+
+def handle_SessionStart(payload: dict, cfg: dict) -> int:
+    if not cfg.get("safety", {}).get("sessionContextLoad", True):
+        return 0
+    source = payload.get("source") or "startup"
+
+    try:
+        SESSION_ACTIVE_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        SESSION_ACTIVE_MARKER.write_text(source)
+    except OSError:
+        pass
+
+    try:
+        context_text = _build_session_context(source)
+    except Exception:
+        return 0
+
+    response = {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": context_text,
+        }
+    }
+    print(json.dumps(response))
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# UserPromptSubmit: nudge if PROJECT_RULES.md is still a template
+# ---------------------------------------------------------------------------
+
+def handle_UserPromptSubmit(payload: dict, cfg: dict) -> int:
+    if not cfg.get("safety", {}).get("projectRulesNudge", True):
+        return 0
+    if RULES_WARNED_MARKER.exists():
+        return 0
+    rules_path = REPO_ROOT / "PROJECT_RULES.md"
+    if not rules_path.is_file():
+        return 0
+    try:
+        text = rules_path.read_text()
+    except OSError:
+        return 0
+    placeholder_count = text.count("[e.g.")
+    if placeholder_count >= 5:
+        print(
+            "[harness] PROJECT_RULES.md is still template "
+            f"({placeholder_count} placeholders) — run /adopt-project to fill from real codebase facts.",
+            file=sys.stderr,
+        )
+        try:
+            RULES_WARNED_MARKER.write_text("1")
+        except OSError:
+            pass
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Verification reminder (Stop event) — gating-aware
 # ---------------------------------------------------------------------------
 
 VERIFICATION_REMINDER = """
@@ -221,9 +345,35 @@ See .claude/rules/karpathy-principles.md (Goal-Driven Execution).
 """
 
 
+def _has_active_task() -> bool:
+    """Detect in-progress markers in state/tasks.md."""
+    tasks_path = REPO_ROOT / "state/tasks.md"
+    if not tasks_path.is_file():
+        return False
+    try:
+        text = tasks_path.read_text().lower()
+    except OSError:
+        return False
+    return any(m in text for m in ("[in_progress]", "[in progress]", "- [ ]", "* [ ]"))
+
+
 def handle_Stop(payload: dict, cfg: dict) -> int:
-    if cfg.get("safety", {}).get("verificationReminder", True):
-        print(VERIFICATION_REMINDER, file=sys.stderr)
+    safety = cfg.get("safety", {})
+    if not safety.get("verificationReminder", True):
+        return 0
+    quiet_when_idle = safety.get("verificationReminderQuietWhenIdle", True)
+    if quiet_when_idle:
+        # Print only when the session marker exists OR there is an active task.
+        if not SESSION_ACTIVE_MARKER.exists() and not _has_active_task():
+            return 0
+    print(VERIFICATION_REMINDER, file=sys.stderr)
+    # Clear marker so the reminder doesn't repeat on every Stop in the same session.
+    try:
+        SESSION_ACTIVE_MARKER.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
     return 0
 
 
@@ -234,6 +384,8 @@ def _noop(_payload: dict, _cfg: dict) -> int:  # placeholder for future logic
 HANDLERS = {
     "PreToolUse": handle_PreToolUse,
     "PostToolUse": handle_PostToolUse,
+    "SessionStart": handle_SessionStart,
+    "UserPromptSubmit": handle_UserPromptSubmit,
     "Stop": handle_Stop,
 }
 for _e in EVENTS:
@@ -290,7 +442,21 @@ def self_test() -> int:
         {"tool_name": "Bash", "tool_input": {"command": "rm -rf /tmp/x"}}, cfg,
     )
     if rc != 2:
-        failures.append("block_destructive: expected 2, got " + str(rc))
+        failures.append("block_destructive (rm -rf): expected 2, got " + str(rc))
+
+    # Safety: fork bomb must be blocked
+    rc = handle_PreToolUse(
+        {"tool_name": "Bash", "tool_input": {"command": ":(){ :|:& };:"}}, cfg,
+    )
+    if rc != 2:
+        failures.append("block_destructive (fork bomb): expected 2, got " + str(rc))
+
+    # Safety: mkfs must be blocked
+    rc = handle_PreToolUse(
+        {"tool_name": "Bash", "tool_input": {"command": "mkfs.ext4 /dev/sda1"}}, cfg,
+    )
+    if rc != 2:
+        failures.append("block_destructive (mkfs): expected 2, got " + str(rc))
 
     # Safety: secret read must be blocked
     rc = handle_PreToolUse(
@@ -306,8 +472,39 @@ def self_test() -> int:
     if rc != 0:
         failures.append("benign Bash: expected 0, got " + str(rc))
 
-    # All other events return 0 with empty payload
+    # SessionStart must not crash with empty payload and must produce JSON.
+    import io
+    buf = io.StringIO()
+    real_stdout = sys.stdout
+    sys.stdout = buf
+    try:
+        rc = handle_SessionStart({"source": "startup"}, cfg)
+    finally:
+        sys.stdout = real_stdout
+    if rc != 0:
+        failures.append(f"SessionStart: expected 0, got {rc}")
+    if cfg.get("safety", {}).get("sessionContextLoad", True):
+        try:
+            payload = json.loads(buf.getvalue() or "{}")
+            if "hookSpecificOutput" not in payload:
+                failures.append("SessionStart: missing hookSpecificOutput in stdout")
+        except json.JSONDecodeError:
+            failures.append("SessionStart: stdout is not valid JSON")
+
+    # UserPromptSubmit must not crash and must respect marker idempotency.
+    try:
+        RULES_WARNED_MARKER.unlink()
+    except FileNotFoundError:
+        pass
+    rc = handle_UserPromptSubmit({}, cfg)
+    if rc != 0:
+        failures.append(f"UserPromptSubmit: expected 0, got {rc}")
+
+    # All other events return 0 with empty payload (skip ones already exercised).
+    exercised = {"PreToolUse", "SessionStart", "UserPromptSubmit"}
     for e in EVENTS:
+        if e in exercised:
+            continue
         rc = HANDLERS[e]({}, cfg)
         if rc != 0:
             failures.append(f"{e} handler: expected 0, got {rc}")

@@ -2,6 +2,8 @@
 .claude/settings.local.json
 .claude/hooks/config/hooks-config.local.json
 .claude/hooks/log.jsonl
+.claude/hooks/.session-active
+.claude/hooks/.rules-warned
 CLAUDE.local.md
 
 # Environment files

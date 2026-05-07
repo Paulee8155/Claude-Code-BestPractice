@@ -117,6 +117,12 @@ if command -v python3 >/dev/null 2>&1; then
     else
         red "hooks.py --self-test failed"
     fi
+    if echo '{"source":"startup"}' | python3 "$ROOT/.claude/hooks/scripts/hooks.py" SessionStart >/dev/null 2>&1; then
+        green "SessionStart smoke OK"
+        PASS=$((PASS+1))
+    else
+        red "SessionStart smoke failed"
+    fi
 else
     warn "python3 not on PATH — cannot run --self-test"
 fi
