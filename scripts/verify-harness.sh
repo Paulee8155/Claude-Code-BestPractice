@@ -46,18 +46,6 @@ check_frontmatter() {
     fi
 }
 
-check_nonempty_field() {
-    local f="$ROOT/$1"
-    local field="$2"
-    local value
-    value=$(grep "^${field}:" "$f" 2>/dev/null | sed "s/^${field}://" | xargs)
-    if [[ -n "$value" && "$value" != "" ]]; then
-        PASS=$((PASS+1))
-    else
-        red "Empty frontmatter '$field' in $1"
-    fi
-}
-
 echo ""
 echo "═══════════════════════════════════════"
 echo "  Harness Verification"
@@ -68,8 +56,9 @@ echo ""
 echo "── Core Files ──"
 check_file "CLAUDE.md"
 check_file "PROJECT_RULES.md"
+check_file "README.md"
+check_file ".mcp.json"
 
-# CLAUDE.md size check
 if [[ -f "$ROOT/CLAUDE.md" ]]; then
     lines=$(wc -l < "$ROOT/CLAUDE.md")
     if [[ $lines -le 140 ]]; then
@@ -81,21 +70,39 @@ if [[ -f "$ROOT/CLAUDE.md" ]]; then
 fi
 
 echo ""
-echo "── Skills ──"
-SKILLS=(project-onboarding token-budget-routing feature-planning implementation-loop review-gate harness-evolution)
-for skill in "${SKILLS[@]}"; do
-    f=".claude/skills/$skill/SKILL.md"
-    check_file "$f" "skill: $skill"
+echo "── RPI Workflow ──"
+for cmd in research plan implement; do
+    check_file ".claude/commands/rpi/$cmd.md" "command: /rpi:$cmd"
+done
+RPI_AGENTS=(senior-software-engineer product-manager ux-designer requirement-parser \
+            technical-cto-advisor code-reviewer constitutional-validator \
+            documentation-analyst-writer)
+for agent in "${RPI_AGENTS[@]}"; do
+    f=".claude/agents/rpi/$agent.md"
+    check_file "$f" "rpi-agent: $agent"
     if [[ -f "$ROOT/$f" ]]; then
         check_frontmatter "$f" "name"
         check_frontmatter "$f" "description"
-        check_nonempty_field "$f" "description"
     fi
+done
+check_file "development-workflows/rpi/rpi-workflow.md"
+
+echo ""
+echo "── Drift-Tracking Workflows ──"
+DRIFT_TOPICS=(concepts claude-commands claude-settings claude-skills claude-subagents)
+for t in "${DRIFT_TOPICS[@]}"; do
+    case "$t" in
+        concepts) cmd_name="workflow-concepts" ;;
+        *)        cmd_name="workflow-$t" ;;
+    esac
+    check_file ".claude/commands/workflows/best-practice/$cmd_name.md" "command: /$cmd_name"
+    check_file ".claude/agents/workflows/best-practice/${cmd_name}-agent.md" "agent: ${cmd_name}-agent"
+    check_file "changelog/best-practice/$t/changelog.md" "changelog: $t"
 done
 
 echo ""
-echo "── Agents ──"
-AGENTS=(architect reviewer security-reviewer tester implementer)
+echo "── General-Purpose Agents ──"
+AGENTS=(architect reviewer security-reviewer tester implementer debugger)
 for agent in "${AGENTS[@]}"; do
     f=".claude/agents/$agent.md"
     check_file "$f" "agent: $agent"
@@ -106,23 +113,25 @@ for agent in "${AGENTS[@]}"; do
 done
 
 echo ""
-echo "── Commands ──"
-COMMANDS=(onboard-project plan-feature implement-feature review-work evolve-harness project-status)
-for cmd in "${COMMANDS[@]}"; do
-    check_file ".claude/commands/$cmd.md" "command: /$cmd"
-done
-
-echo ""
 echo "── Hooks ──"
-check_file ".claude/hooks/block-destructive.sh"
-check_file ".claude/hooks/protect-secrets.sh"
-if [[ -f "$ROOT/.claude/hooks/block-destructive.sh" ]]; then
-    if [[ -x "$ROOT/.claude/hooks/block-destructive.sh" ]]; then
-        green "block-destructive.sh is executable"
+check_file ".claude/hooks/HOOKS-README.md"
+check_file ".claude/hooks/scripts/hooks.py"
+check_file ".claude/hooks/config/hooks-config.json"
+if [[ -x "$ROOT/.claude/hooks/scripts/hooks.py" ]]; then
+    green "hooks.py is executable"
+    PASS=$((PASS+1))
+else
+    warn "hooks.py is not executable (run: chmod +x .claude/hooks/scripts/hooks.py)"
+fi
+if command -v python3 >/dev/null 2>&1; then
+    if python3 "$ROOT/.claude/hooks/scripts/hooks.py" --self-test >/dev/null 2>&1; then
+        green "hooks.py --self-test passes"
         PASS=$((PASS+1))
     else
-        warn "block-destructive.sh is not executable (run: chmod +x)"
+        red "hooks.py --self-test failed"
     fi
+else
+    warn "python3 not on PATH — cannot run --self-test"
 fi
 
 echo ""
@@ -135,13 +144,31 @@ if [[ -f "$ROOT/.claude/settings.json" ]]; then
     else
         red "settings.json is invalid JSON"
     fi
-    if grep -q '"hooks"' "$ROOT/.claude/settings.json"; then
-        green "settings.json has hooks configured"
+    for ev in PreToolUse PostToolUse SessionStart PreCompact SubagentStart Stop; do
+        if grep -q "\"$ev\"" "$ROOT/.claude/settings.json"; then
+            PASS=$((PASS+1))
+        else
+            red "settings.json missing hook event: $ev"
+        fi
+    done
+fi
+
+if [[ -f "$ROOT/.mcp.json" ]]; then
+    if python3 -m json.tool "$ROOT/.mcp.json" > /dev/null 2>&1; then
+        green ".mcp.json is valid JSON"
         PASS=$((PASS+1))
     else
-        warn "settings.json has no hooks configuration"
+        red ".mcp.json is invalid JSON"
     fi
 fi
+
+echo ""
+echo "── Rules ──"
+check_file ".claude/rules/context-mode.md"
+check_file ".claude/rules/rtk.md"
+check_file ".claude/rules/security.md"
+check_file ".claude/rules/testing.md"
+check_file ".claude/rules/markdown-docs.md"
 
 echo ""
 echo "── State Files ──"
@@ -151,13 +178,48 @@ check_file "state/decisions.md"
 check_file "state/progress.md"
 
 echo ""
-echo "── Rules / Token Tools ──"
-check_file ".claude/rules/context-mode.md"
-check_file ".claude/rules/rtk.md"
+echo "── Reference Docs ──"
+check_dir "best-practice"
+check_dir "implementation"
+check_dir "reports"
+
+echo ""
+echo "── Agent Memory ──"
+check_dir ".claude/agent-memory"
+check_file ".claude/agent-memory/README.md"
+
+echo ""
+echo "── Templates ──"
+check_file ".claude/templates/project-profile.md"
+check_file ".claude/templates/tech-stack.md"
 
 echo ""
 echo "── Scripts ──"
 check_file "scripts/verify-harness.sh"
+
+echo ""
+echo "── Stale Files (must NOT exist) ──"
+STALE=(
+    ".claude/hooks/block-destructive.sh"
+    ".claude/hooks/protect-secrets.sh"
+    ".claude/commands/plan-feature.md"
+    ".claude/commands/implement-feature.md"
+    ".claude/commands/review-work.md"
+    ".claude/commands/onboard-project.md"
+    ".claude/commands/evolve-harness.md"
+    ".claude/skills/feature-planning"
+    ".claude/skills/implementation-loop"
+    ".claude/skills/review-gate"
+    "docs/context.md"
+    "docs/tasks.md"
+)
+for s in "${STALE[@]}"; do
+    if [[ -e "$ROOT/$s" ]]; then
+        red "stale path still present: $s"
+    else
+        PASS=$((PASS+1))
+    fi
+done
 
 echo ""
 echo "═══════════════════════════════════════"

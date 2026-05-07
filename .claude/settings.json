@@ -1,10 +1,14 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "disableAllHooks": false,
+
   "permissions": {
     "allow": [
       "Read(*)",
       "Write(*)",
       "Edit(*)",
-      "Bash(git status)",
+
+      "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(git add*)",
@@ -13,11 +17,19 @@
       "Bash(git checkout*)",
       "Bash(git stash*)",
       "Bash(git show*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git restore*)",
+
       "Bash(find . *)",
       "Bash(ls*)",
       "Bash(cat*)",
+      "Bash(head*)",
+      "Bash(tail*)",
       "Bash(grep*)",
+      "Bash(rg*)",
       "Bash(echo*)",
+      "Bash(printf*)",
       "Bash(mkdir*)",
       "Bash(cp*)",
       "Bash(mv*)",
@@ -28,47 +40,124 @@
       "Bash(printenv*)",
       "Bash(rtk*)",
       "Bash(chmod +x*)",
+      "Bash(jq*)",
+      "Bash(python3 -m json.tool*)",
+
       "Bash(gh api*)",
       "Bash(gh pr*)",
-      "Bash(gh issue*)"
+      "Bash(gh issue*)",
+      "Bash(gh run*)",
+      "Bash(gh release*)"
+    ],
+    "ask": [
+      "Bash(npm install*)",
+      "Bash(npm run*)",
+      "Bash(npm publish*)",
+      "Bash(yarn*)",
+      "Bash(pnpm*)",
+      "Bash(pip install*)",
+      "Bash(pip3 install*)",
+      "Bash(uv*)",
+      "Bash(poetry*)",
+      "Bash(brew*)",
+      "Bash(apt*)",
+      "Bash(apk*)",
+      "Bash(docker*)",
+      "Bash(kubectl*)",
+      "Bash(gcloud*)",
+      "Bash(aws*)",
+      "Bash(firebase*)",
+      "Bash(terraform*)",
+      "Bash(kill*)",
+      "Bash(pkill*)",
+      "Bash(chown*)",
+      "Bash(chmod -R*)",
+      "Bash(rm *)"
     ],
     "deny": [
       "Bash(rm -rf*)",
+      "Bash(rm -fr*)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
       "Bash(git reset --hard*)",
       "Bash(git clean -f*)",
+      "Bash(git clean -fd*)",
       "Bash(chmod -R 777*)",
-      "Bash(sudo rm*)"
+      "Bash(sudo rm*)",
+      "Bash(dd if=*)"
     ]
   },
+
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${PWD}/.claude/hooks/block-destructive.sh\""
-          }
-        ]
-      },
-      {
-        "matcher": "Read|Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${PWD}/.claude/hooks/protect-secrets.sh\""
-          }
-        ]
-      }
-    ]
+    "PreToolUse":           [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PreToolUse",           "timeout": 5000 }] }],
+    "PostToolUse":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PostToolUse",          "timeout": 5000 }] }],
+    "PostToolUseFailure":   [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PostToolUseFailure",   "timeout": 5000 }] }],
+    "PermissionRequest":    [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PermissionRequest",    "timeout": 5000 }] }],
+    "UserPromptSubmit":     [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" UserPromptSubmit",     "timeout": 5000 }] }],
+    "Notification":         [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" Notification",         "timeout": 5000 }] }],
+    "Stop":                 [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" Stop",                 "timeout": 5000 }] }],
+    "SubagentStart":        [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" SubagentStart",        "timeout": 5000 }] }],
+    "SubagentStop":         [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" SubagentStop",         "timeout": 5000 }] }],
+    "PreCompact":           [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PreCompact",           "timeout": 5000 }] }],
+    "PostCompact":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PostCompact",          "timeout": 5000 }] }],
+    "SessionStart":         [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" SessionStart",         "timeout": 5000 }] }],
+    "SessionEnd":           [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" SessionEnd",           "timeout": 5000 }] }],
+    "Setup":                [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" Setup",                "timeout": 30000 }] }],
+    "TeammateIdle":         [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" TeammateIdle",         "timeout": 5000 }] }],
+    "TaskCreated":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" TaskCreated",          "timeout": 5000 }] }],
+    "TaskCompleted":        [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" TaskCompleted",        "timeout": 5000 }] }],
+    "ConfigChange":         [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" ConfigChange",         "timeout": 5000 }] }],
+    "WorktreeCreate":       [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" WorktreeCreate",       "timeout": 5000 }] }],
+    "WorktreeRemove":       [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" WorktreeRemove",       "timeout": 5000 }] }],
+    "InstructionsLoaded":   [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" InstructionsLoaded",   "timeout": 5000 }] }],
+    "Elicitation":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" Elicitation",          "timeout": 5000 }] }],
+    "ElicitationResult":    [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" ElicitationResult",    "timeout": 5000 }] }],
+    "StopFailure":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" StopFailure",          "timeout": 5000 }] }],
+    "CwdChanged":           [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" CwdChanged",           "timeout": 5000 }] }],
+    "FileChanged":          [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" FileChanged",          "timeout": 5000 }] }],
+    "PermissionDenied":     [{ "hooks": [{ "type": "command", "command": "python3 \"${PWD}/.claude/hooks/scripts/hooks.py\" PermissionDenied",     "timeout": 5000 }] }]
   },
+
+  "spinnerVerbs": [
+    "Engineering",
+    "Reasoning",
+    "Reviewing",
+    "Refactoring",
+    "Investigating",
+    "Planning",
+    "Implementing",
+    "Verifying",
+    "Architecting",
+    "Stress-testing"
+  ],
+  "spinnerTipsOverride": [
+    "Tip: /rpi:research → /rpi:plan → /rpi:implement is the canonical workflow.",
+    "Tip: rules under .claude/rules/ load lazily via paths: frontmatter.",
+    "Tip: prefix shell calls with `rtk` for 60-90% token savings.",
+    "Tip: hooks/config/hooks-config.local.json can override checked-in defaults.",
+    "Tip: state/ tracks decisions, tasks, context across sessions."
+  ],
+
+  "plansDirectory": "./reports",
+  "outputStyle": "Explanatory",
+
+  "statusLine": {
+    "type": "command",
+    "command": "printf '%s · %s · %s' \"$(git branch --show-current 2>/dev/null || echo no-git)\" \"$(basename \"$PWD\")\" \"${CLAUDE_MODEL:-claude}\""
+  },
+
+  "attribution": {
+    "coAuthoredBy": true,
+    "prCredit": true
+  },
+
   "autoCompactThreshold": 0.8,
   "enableAllProjectMcpServers": true,
   "respectGitignore": true,
   "cleanupPeriodDays": 30,
+
   "env": {
-    "PATH": "/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    "PATH": "/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80"
   }
 }

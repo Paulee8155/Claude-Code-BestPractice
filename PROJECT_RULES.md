@@ -140,3 +140,39 @@ Document known technical debt or constraints Claude should work around:
 
 - [e.g. The auth module uses an old pattern — do not refactor without a separate task]
 - [e.g. CI is slow — do not rely on CI to catch issues, run tests locally]
+
+---
+
+## Memory Hierarchy
+
+Claude Code loads memory files from project root **upward** at startup (so a
+parent `CLAUDE.md` applies to all subdirs) and **downward lazily** when it
+touches a path (component-specific `CLAUDE.md` activates on demand).
+
+Order of precedence (highest first):
+
+1. `CLAUDE.local.md` (gitignored personal overrides)
+2. Component `CLAUDE.md` (e.g. `frontend/CLAUDE.md`, `services/api/CLAUDE.md`)
+3. `PROJECT_RULES.md` (this file)
+4. `CLAUDE.md` (root)
+5. `.claude/rules/<file>.md` lazy-loaded by `paths:` frontmatter
+6. `~/.claude/CLAUDE.md` (user global)
+
+Reference: `best-practice/claude-memory.md`,
+`reports/claude-global-vs-project-settings.md`.
+
+---
+
+## MCP Servers
+
+The harness ships with `playwright`, `context7`, and `deepwiki` (see
+`.mcp.json`). Add project-specific servers there. Verify with `/mcp`.
+
+| Server | Use for |
+|---|---|
+| `context7` | Up-to-date library / SDK / framework docs |
+| `playwright` | Headless browser automation, E2E checks |
+| `deepwiki` | Indexed knowledge-base lookup |
+
+When a server requires secrets, put them in `.env.<server>` (gitignored) and
+reference via `${env:VAR}` in `.mcp.json`.
