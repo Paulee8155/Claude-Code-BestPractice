@@ -57,7 +57,7 @@ Take inventory — no changes, only reads:
 6. Env: `.env.example` / `.env.sample`?
 7. Docs: `README.md`, `CONTRIBUTING.md`, `docs/`, `docs/adr/`?
 
-Report as a short table. On conflicts (existing `CLAUDE.md` etc.): explain that `adopt.sh` automatically backs up to `.harness-backup/<timestamp>/` AND preserves substantive existing files (harness version is dropped beside as `<name>.harness` for manual review).
+Report as a short table. On conflicts (existing `CLAUDE.md` etc.): explain that `adopt.sh` automatically backs up to `.harness-backup/<timestamp>/`.
 
 ## Step 4 — Clone the harness (into a temp dir, not here)
 
@@ -74,12 +74,10 @@ ls /tmp/harness-source/scripts/adopt.sh   # verify
 
 The script asks once "Continue? (y/N)" — the user answers in the terminal. It:
 - backs up existing files into `.harness-backup/<timestamp>/`
-- copies harness files in (only if the target file is missing or empty)
-- if a top-level file already has content (>50 bytes): drops the harness version next to it as `<name>.harness` for manual merge instead of overwriting
-- merges harness `.gitignore` lines into existing `.gitignore` (no duplicates)
+- copies harness files in
 - never overwrites: `.claude/settings.local.json`, your own scripts with the same name
 
-Report what was backed up + where, plus any `.harness` sidecar files the user must merge manually.
+Report what was backed up + where.
 
 ## Step 6 — Run /adopt-project (the heart of it)
 
@@ -94,7 +92,6 @@ Read (with `Read` and `Glob`):
 - `.env.example` for env vars
 - ALL `CLAUDE.md` files in the repo (also in subdirectories — `Glob: **/CLAUDE.md`)
 - `.harness-backup/<latest-timestamp>/` if present
-- All `<name>.harness` sidecar files dropped by adopt.sh — these contain harness defaults you may want to merge
 
 ### 6.2 Fill PROJECT_RULES.md
 Replace EVERY `[bracketed placeholder]` with verified values:
@@ -130,7 +127,6 @@ Examples that must be REAL, not invented:
 If `.harness-backup/<timestamp>/` exists (use the LATEST if multiple):
 - Compare old `CLAUDE.md` vs. new harness `CLAUDE.md`. Custom content from old → merge into `PROJECT_RULES.md` "Project-Specific Rules"
 - If old `state/` files had real content (not just templates): merge into the new `state/` files
-- Review every `<name>.harness` sidecar — the user's existing top-level file was preserved; harness defaults are in the sidecar for manual merge
 
 ### 6.6 Sensitive areas
 Grep for tell-tale imports/terms:
@@ -159,17 +155,15 @@ Report very explicitly:
 
 1. **Tool status** — what was already there, what was installed
 2. **Backup path** — where `.harness-backup/<timestamp>/` lives
-3. **`.harness` sidecar files** — list every preserved-vs-harness pair so the user can merge manually
-4. **Filled templates** with values:
+3. **Filled templates** with values:
    - PROJECT_RULES.md: which sections were filled with which values
    - state/context.md: project description + current focus
    - Which `.claude/rules/<area>.md` files were created + why
-5. **Verified vs. guessed** — be honest: explicitly mark what was derived from real code facts and where you had to guess
-6. **Open questions** (max 5, ranked by importance) you couldn't answer from the code
-7. **What the user still needs to do**:
+4. **Verified vs. guessed** — be honest: explicitly mark what was derived from real code facts and where you had to guess
+5. **Open questions** (max 5, ranked by importance) you couldn't answer from the code
+6. **What the user still needs to do**:
    - Final review of PROJECT_RULES.md (especially deleted sections)
    - Review `.harness-backup/` to make sure nothing important was missed
-   - Merge any `<name>.harness` sidecar files into the originals
    - Restart Claude Code for MCP reload
    - First commands to try: `/rpi:plan <feature>`, `/rpi:research <topic>`
 
@@ -192,7 +186,7 @@ Report very explicitly:
 
 ## What you have afterward
 
-- Harness in the project, with backups of your old files in `.harness-backup/<ts>/` and harness defaults preserved as `<name>.harness` sidecars
+- Harness in the project with backups of your old files in `.harness-backup/<ts>/`
 - `PROJECT_RULES.md` filled with real values from your codebase
 - `state/context.md` with project description + current focus
 - Project-specific rules in `.claude/rules/` (e.g. `api-routes.md`, `database.md`)
@@ -202,7 +196,6 @@ Report very explicitly:
 ## What you still need to do
 
 1. Final review of PROJECT_RULES.md — answer open questions, check deleted sections
-2. Merge any `<name>.harness` sidecars into the originals where appropriate
-3. If your backup under `.harness-backup/` had valuable custom configs that weren't merged: pull them over manually
-4. Restart Claude Code for MCP reload
-5. Try `/rpi:plan` with your next feature
+2. If your backup under `.harness-backup/` had valuable custom configs that weren't merged: pull them over manually
+3. Restart Claude Code for MCP reload
+4. Try `/rpi:plan` with your next feature

@@ -73,61 +73,12 @@ else
   rmdir "$BACKUP" "$TARGET/.harness-backup" 2>/dev/null || true
 fi
 
-# ---------- 3. Copy harness files (non-destructive) ----------
-# Strategy:
-#   - If a top-level file exists in the target with substantive content (>50 bytes),
-#     we drop the harness version next to it as <name>.harness so the user can
-#     review and merge manually. Backup is already in $BACKUP from step 2.
-#   - If the file is missing or empty, copy the harness version as-is.
-#   - .gitignore is special: append harness lines that aren't already present.
+# ---------- 3. Copy harness files ----------
 echo
-info "Copying harness files (non-destructive)..."
-HARNESS_DROP=()
-copy_or_sidecar() {
-  local name="$1"
-  local src="$HARNESS/$name"
-  local dst="$TARGET/$name"
-  [[ -f "$src" ]] || return 0
-  if [[ -s "$dst" ]] && [[ $(wc -c < "$dst") -gt 50 ]]; then
-    cp "$src" "$dst.harness"
-    HARNESS_DROP+=("$name.harness")
-    info "Preserved existing $name; harness version saved as $name.harness"
-  else
-    cp "$src" "$dst"
-    ok "Installed $name"
-  fi
-}
-
-merge_gitignore() {
-  local src="$HARNESS/.gitignore"
-  local dst="$TARGET/.gitignore"
-  [[ -f "$src" ]] || return 0
-  if [[ ! -f "$dst" ]]; then
-    cp "$src" "$dst"
-    ok "Installed .gitignore"
-    return 0
-  fi
-  local added=0
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    [[ "$line" =~ ^# ]] && continue
-    if ! grep -qxF "$line" "$dst"; then
-      printf '%s\n' "$line" >> "$dst"
-      added=$((added+1))
-    fi
-  done < "$src"
-  if (( added > 0 )); then
-    ok "Merged $added new lines into existing .gitignore"
-  else
-    info "Existing .gitignore already covers harness entries"
-  fi
-}
-
-copy_or_sidecar "CLAUDE.md"
-copy_or_sidecar "PROJECT_RULES.md"
-copy_or_sidecar "README.md"
-copy_or_sidecar ".mcp.json"
-merge_gitignore
+info "Copying harness files..."
+for f in CLAUDE.md PROJECT_RULES.md README.md .gitignore .mcp.json; do
+  [[ -f "$HARNESS/$f" ]] && cp "$HARNESS/$f" "$TARGET/$f"
+done
 
 # .claude/ — merge: copy harness on top, but never overwrite settings.local.json
 mkdir -p "$TARGET/.claude"
@@ -163,9 +114,4 @@ echo "     → Claude will analyze your codebase and fill PROJECT_RULES.md,"
 echo "       state/context.md, and .claude/rules/ automatically."
 echo
 [[ ${#CONFLICTS[@]} -gt 0 ]] && echo "  Your previous files are backed up at: $BACKUP"
-if [[ ${#HARNESS_DROP[@]} -gt 0 ]]; then
-  echo
-  warn "Existing files were preserved. Review and merge harness versions manually:"
-  for f in "${HARNESS_DROP[@]}"; do echo "    - $f"; done
-fi
 echo
