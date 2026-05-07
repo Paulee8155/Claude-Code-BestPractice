@@ -79,12 +79,25 @@
       "Bash(rm -fr*)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin master*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(git push origin HEAD:master*)",
       "Bash(git reset --hard*)",
       "Bash(git clean -f*)",
       "Bash(git clean -fd*)",
+      "Bash(git commit*--no-verify*)",
       "Bash(chmod -R 777*)",
       "Bash(sudo rm*)",
-      "Bash(dd if=*)"
+      "Bash(sudo*)",
+      "Bash(dd if=*)",
+      "Bash(curl*|*sh*)",
+      "Bash(wget*|*sh*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(*/secrets/*)",
+      "Read(*/.aws/credentials)",
+      "Read(*/.ssh/id_*)"
     ]
   },
 
@@ -134,11 +147,13 @@
     "Tip: /rpi:research → /rpi:plan → /rpi:implement is the canonical workflow.",
     "Tip: rules under .claude/rules/ load lazily via paths: frontmatter.",
     "Tip: prefix shell calls with `rtk` for 60-90% token savings.",
-    "Tip: hooks/config/hooks-config.local.json can override checked-in defaults.",
-    "Tip: state/ tracks decisions, tasks, context across sessions."
+    "Tip: claude-mem search() recalls prior sessions — http://localhost:37777",
+    "Tip: state/ tracks decisions, tasks, context across sessions.",
+    "Tip: skills under .claude/skills/ — invoke via Skill tool.",
+    "Tip: karpathy-principles loads always — read before non-trivial changes."
   ],
 
-  "plansDirectory": "./reports",
+  "plansDirectory": "./state/plans",
   "outputStyle": "Explanatory",
 
   "statusLine": {

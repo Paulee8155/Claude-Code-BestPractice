@@ -1,7 +1,7 @@
 # CLAUDE.md — Project Harness
 
 A reusable Claude Code harness for new and existing projects.
-Layers: `.claude/{commands,agents,skills,rules,hooks,agent-memory,templates}` + `state/` + RTK + context-mode.
+Layers: `.claude/{commands,agents,skills,rules,hooks,agent-memory,templates}` + `state/` + RTK + claude-mem.
 
 ---
 
@@ -10,7 +10,7 @@ Layers: `.claude/{commands,agents,skills,rules,hooks,agent-memory,templates}` + 
 1. Read `PROJECT_RULES.md` — stack, conventions, constraints, sensitive areas.
 2. Check `state/context.md` and `state/tasks.md` for in-progress work.
 3. Unfamiliar project: walk through `/rpi:research <spec>` first.
-4. After compaction: `ctx_search(["summary","tasks","last request"], sort: "timeline")`
+4. After compaction or `/resume`: query claude-mem `search` MCP tool for prior context (e.g. `search("last task summary")`).
 
 ## Work Mode
 
@@ -20,6 +20,7 @@ Layers: `.claude/{commands,agents,skills,rules,hooks,agent-memory,templates}` + 
 - Run tests/checks after each step and report results.
 - One concern per commit. Explain *why*, not *what*.
 - No overengineering. Three similar lines beat a premature abstraction.
+- Follow the four discipline principles in `.claude/rules/karpathy-principles.md`.
 
 ## Orchestration
 
@@ -27,13 +28,12 @@ Layers: `.claude/{commands,agents,skills,rules,hooks,agent-memory,templates}` + 
 |---|---|---|
 | Commands | Orchestrate workflows | `.claude/commands/` |
 | Agents | Isolated specialist context windows | `.claude/agents/` |
-| Skills | Reusable preloaded procedures | `.claude/skills/` |
+| Skills | Reusable invocable procedures | `.claude/skills/` |
 | Rules | Lazy-loaded path-specific guidance | `.claude/rules/` |
 | Hooks | Deterministic safety + lifecycle automation | `.claude/hooks/` |
-| Memory | Persistent per-agent state | `.claude/agent-memory/` |
+| Memory | Per-agent state + cross-session memory (claude-mem) | `.claude/agent-memory/`, `~/.claude-mem/` |
 
 **Canonical workflow (RPI):** `/rpi:research <spec>` · `/rpi:plan <feature>` · `/rpi:implement <phase>`
-**Drift tracking:** `/workflow-concepts` · `/workflow-claude-{commands,settings,skills,subagents}`
 
 Commands orchestrate via the `Skill` tool (skills) and `Agent` tool (agents).
 Do not implement logic inside commands — delegate to skills and agents.
@@ -42,15 +42,12 @@ Do not implement logic inside commands — delegate to skills and agents.
 
 | Need | Where |
 |---|---|
-| Why a harness > prompts | `reports/why-harness-is-important.md` |
-| Memory hierarchy & monorepo loading | `best-practice/claude-memory.md` |
-| settings.json reference | `best-practice/claude-settings.md` |
-| Skill / agent / command frontmatter | `best-practice/claude-{skills,subagents,commands}.md` |
-| MCP server setup | `best-practice/claude-mcp.md` |
-| Hands-on patterns | `implementation/*.md` |
-| Configuration hierarchy | `reports/claude-global-vs-project-settings.md` |
+| Discipline principles (always-on) | `.claude/rules/karpathy-principles.md` |
+| Tool routing rules | `.claude/rules/rtk.md`, `.claude/rules/claude-mem.md` |
 | Hook system details | `.claude/hooks/HOOKS-README.md` |
-| RPI workflow walkthrough | `development-workflows/rpi/rpi-workflow.md` |
+| RPI workflow commands | `.claude/commands/rpi/{research,plan,implement}.md` |
+| Onboard existing project | `.claude/commands/adopt-project.md` (run `/adopt-project`) |
+| One-time setup | `scripts/setup.sh` |
 
 ## Token Budget
 
@@ -58,14 +55,13 @@ Do not implement logic inside commands — delegate to skills and agents.
 |---|---|
 | Short output (<20 lines) | `rtk <cmd>` |
 | git diff / logs / build | `rtk git diff`, `rtk cargo build`, etc. |
-| Large output or analysis | `ctx_execute(language: "shell", code: "...")` |
-| Web fetch | `ctx_fetch_and_index(url, source)` → `ctx_search(queries)` |
-| Multiple commands in parallel | `ctx_batch_execute(commands, queries)` |
+| Large repeated output | RTK filters (auto via PreToolUse hook) |
+| Web fetch | `WebFetch` (or context7 MCP for library docs) |
+| Memory recall | claude-mem `search`, `timeline`, `get_observations` MCP tools |
 
-Full reference: `.claude/rules/rtk.md` · `.claude/rules/context-mode.md`
+Full reference: `.claude/rules/rtk.md` · `.claude/rules/claude-mem.md`
 
 RTK is globally active. Never run `rtk init` or modify RTK global config without confirmation.
-Context Mode: never `ctx_purge` without explicit user confirmation.
 
 ## Safety
 
@@ -87,6 +83,7 @@ When in doubt: stop, describe the action, ask.
 
 - Never skip pre-commit hooks (`--no-verify`).
 - Never force-push without explicit instruction.
+- Never push directly to `main`/`master` — use feature branches + PRs.
 - Squash-merge feature branches for clean history.
 
 ## Hooks
@@ -100,15 +97,17 @@ python3 .claude/hooks/scripts/hooks.py --self-test
 
 ## MCP Servers
 
-`.mcp.json` registers `playwright`, `context7`, `deepwiki`. Verify with
-`/mcp`. Project servers auto-enable via `enableAllProjectMcpServers: true`.
+`.mcp.json` registers `playwright`, `context7`, `deepwiki`, plus claude-mem
+(installed via `npx claude-mem install`). Verify with `/mcp`.
+Project servers auto-enable via `enableAllProjectMcpServers: true`.
 
 ## Context & Session Continuity
 
-context-mode handles continuity automatically via PreToolUse, PostToolUse,
-PreCompact, SessionStart hooks. Manual compact at ~50% context if not
+claude-mem captures observations across sessions and exposes them via
+`search` / `timeline` / `get_observations` MCP tools. Web viewer at
+`http://localhost:37777`. Manual compact at ~50% context if not
 auto-triggered. Use `/rewind` for mistakes. Routing rules:
-`.claude/rules/context-mode.md`.
+`.claude/rules/claude-mem.md`.
 
 ## Output
 

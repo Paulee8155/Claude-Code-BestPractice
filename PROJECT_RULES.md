@@ -158,9 +158,6 @@ Order of precedence (highest first):
 5. `.claude/rules/<file>.md` lazy-loaded by `paths:` frontmatter
 6. `~/.claude/CLAUDE.md` (user global)
 
-Reference: `best-practice/claude-memory.md`,
-`reports/claude-global-vs-project-settings.md`.
-
 ---
 
 ## MCP Servers

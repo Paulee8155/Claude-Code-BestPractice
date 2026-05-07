@@ -4,12 +4,12 @@
   "disableSound": true,
 
   "disablePreToolUseHook": false,
-  "disablePostToolUseHook": true,
+  "disablePostToolUseHook": false,
   "disablePostToolUseFailureHook": true,
   "disablePermissionRequestHook": true,
   "disableUserPromptSubmitHook": true,
   "disableNotificationHook": true,
-  "disableStopHook": true,
+  "disableStopHook": false,
   "disableSubagentStartHook": true,
   "disableSubagentStopHook": true,
   "disablePreCompactHook": true,
@@ -31,10 +31,12 @@
   "disableFileChangedHook": true,
   "disablePermissionDeniedHook": true,
 
-  "_safety": "PreToolUse stays enabled by default — block-destructive and protect-secrets run there.",
+  "_safety": "PreToolUse runs block-destructive + protect-secrets. PostToolUse runs auto-format (best-effort, silent if formatter missing). Stop prints a verification reminder.",
   "safety": {
     "blockDestructive": true,
-    "protectSecrets": true
+    "protectSecrets": true,
+    "autoFormat": true,
+    "verificationReminder": true
   },
 
   "_log": "When disableLogging is false, hook events are appended to .claude/hooks/log.jsonl",

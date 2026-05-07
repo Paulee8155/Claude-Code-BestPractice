@@ -1,221 +1,201 @@
 # Claude Code Project Harness
 
-A reusable Claude Code wrapper for new and existing projects. Drop it into a
-repo, fill in `PROJECT_RULES.md`, and Claude has consistent rules, commands,
-agents, hooks, and a structured RPI workflow from day one.
+Top-1 % drop-in setup for Claude Code. Rules, skills, agents, hooks,
+session memory, RPI workflow — productive on day one for new projects, and
+self-adopting for existing ones.
 
-Derived from [shanraisshan/claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice).
-Extended with [RTK](https://github.com/rtk-ai/rtk) (60–90 % token savings on
-shell output) and [context-mode](https://github.com/mksglu/context-mode)
-(session continuity + context-efficient tool routing).
-
----
-
-## What this is
-
-A **project shell**, not an application. Copy it into any new project to give
-Claude Code:
-
-- Stable working rules (`CLAUDE.md`, `PROJECT_RULES.md`, `.claude/rules/`)
-- Slash commands for the canonical Research → Plan → Implement workflow
-- Specialised subagents for design, implementation, review, testing,
-  debugging, security
-- A 27-event hook system with built-in safety checks
-- Project-state tracking in `state/` that survives sessions
-- A drift-tracking workflow that flags when official Claude Code changes
-  outpace this harness
+Built on:
+- [shanraisshan/claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice) — base structure
+- [RTK](https://github.com/rtk-ai/rtk) — 60–90 % token savings on shell output
+- [claude-mem](https://github.com/thedotmack/claude-mem) — cross-session memory with semantic search + web viewer at `localhost:37777`
+- [karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) — Karpathy discipline principles (always-loaded)
+- [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — 12 phased skills (planning, TDD, debugging, review, security, perf, simplification, git, docs, context, source-driven, incremental)
 
 ---
 
-## Quick start
+## What you get
+
+| Layer | What | Where |
+|---|---|---|
+| Discipline | Karpathy's 4 always-on rules | `.claude/rules/karpathy-principles.md` |
+| Memory | Cross-session semantic recall | `.claude/rules/claude-mem.md` + `~/.claude-mem/` |
+| Token savings | RTK pre-active on every Bash | `.claude/rules/rtk.md` |
+| Workflow | Research → Plan → Implement | `.claude/commands/rpi/` |
+| Skills | 12 universal procedures | `.claude/skills/` |
+| Agents | 6 general + 3 domain (frontend, backend, db) + 8 RPI | `.claude/agents/` |
+| Hooks | Block destructive · protect secrets · auto-format · verification reminder | `.claude/hooks/` |
+| State | Survives sessions: context, tasks, decisions, progress | `state/` |
+| Scripts | Setup, adopt-existing, worktree, verify | `scripts/` |
+
+---
+
+## Use case 1 — New project
 
 ```bash
-# 1. Copy harness into your project
-cp -r /path/to/this-harness/. /path/to/your-project/
-
-# 2. Install RTK (one-time, machine-wide)
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-rtk init -g --auto-patch
-
-# 3. Install context-mode plugin (inside Claude Code)
-#    /plugin marketplace add mksglu/context-mode
-#    /plugin install context-mode@context-mode
-#    /context-mode:ctx-doctor   # all checks must pass
-
-# 4. Fill in PROJECT_RULES.md and templates/, then run:
-claude
+cp -r /path/to/this-harness/. /path/to/your-new-project/
+cd /path/to/your-new-project
+./scripts/setup.sh        # interactive: tools check + fill PROJECT_RULES.md
+# Open Claude Code, start working.
 ```
 
-The hooks self-test runs on demand:
+`setup.sh` verifies RTK + Bun + claude-mem, asks for project name + stack,
+fills `PROJECT_RULES.md`, initialises `state/`. Idempotent.
+
+## Use case 2 — Existing project
 
 ```bash
-python3 .claude/hooks/scripts/hooks.py --self-test
+./scripts/adopt.sh /path/to/your/existing/project
+# adopt.sh copies harness in, backs up any conflicts to .harness-backup/<ts>/
+cd /path/to/your/existing/project
+# Open Claude Code, then run:
+/adopt-project
+# Claude reads your real codebase and fills PROJECT_RULES.md, state/,
+# .claude/rules/ from verified facts — no placeholders, no guesses.
+```
+
+## Use case 3 — Parallel feature work (worktrees)
+
+```bash
+./scripts/worktree.sh add feat/checkout-redesign
+# Creates ../<repo>-wt/feat/checkout-redesign
+# Open a second Claude Code session there — fully isolated.
 ```
 
 ---
 
-## Concepts (A-C-S architecture)
+## Prerequisites (machine-wide, one-time)
 
-| Layer | Role | Location |
+| Tool | Why | Install |
 |---|---|---|
-| **Commands** | Orchestrate workflows, entry points | `.claude/commands/` |
-| **Agents** | Isolated specialist context windows | `.claude/agents/` |
-| **Skills** | Reusable, preloaded procedures | `.claude/skills/` |
-| **Rules** | Lazy-loaded path-specific guidance | `.claude/rules/` |
-| **Hooks** | Deterministic safety + lifecycle automation | `.claude/hooks/` |
-| **Memory** | Persistent per-agent state | `.claude/agent-memory/` |
-| **State** | Project tasks, decisions, context | `state/` |
+| `git` | Versioning | `apt install git` |
+| `rtk` | Shell output token savings | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh \| sh` |
+| `bun` | claude-mem runtime | `curl -fsSL https://bun.sh/install \| bash` (auto by claude-mem) |
+| `claude-mem` | Cross-session memory | `npx claude-mem install` |
 
-Deep dive: `reports/why-harness-is-important.md`, `best-practice/claude-memory.md`,
-`reports/claude-agent-command-skill.md`.
+`setup.sh` verifies all of these.
 
 ---
 
-## Canonical workflow: RPI
-
-| Step | Command | What happens |
-|---|---|---|
-| Research | `/rpi:research <requirements>` | Spec analysis, feasibility, GO/NO-GO verdict — read-only |
-| Plan | `/rpi:plan <feature>` | PM stories, UX flow, architecture, phased task list |
-| Implement | `/rpi:implement <phase>` | Phased execution with validation gates |
-
-Workflow detail: `development-workflows/rpi/rpi-workflow.md`.
-
-For everyday tasks the general-purpose agents are still available directly:
-`architect`, `implementer`, `reviewer`, `security-reviewer`, `tester`,
-`debugger`.
-
----
-
-## Drift-tracking workflows
-
-Five commands monitor official Claude Code releases against the local
-reference docs and flag drift. Each command has a paired research agent and
-a changelog file under `changelog/best-practice/<topic>/`.
-
-| Command | Tracks |
-|---|---|
-| `/workflow-concepts` | README CONCEPTS section |
-| `/workflow-claude-commands` | Official commands & frontmatter |
-| `/workflow-claude-settings` | `settings.json` options |
-| `/workflow-claude-skills` | Skill frontmatter fields |
-| `/workflow-claude-subagents` | Subagent frontmatter fields |
-
-Run them periodically or after a Claude Code release.
-
----
-
-## Hook system (27 events)
-
-A single Python handler dispatches every Claude Code lifecycle event.
-Toggle each event in `.claude/hooks/config/hooks-config.json`. Per-machine
-overrides go in `hooks-config.local.json` (gitignored).
-
-By default only `PreToolUse` is active and runs two safety checks:
-
-- `blockDestructive` — blocks `rm -rf`, `git push --force`, `DROP TABLE`, etc.
-- `protectSecrets` — blocks reads/writes to `.env`, `*.pem`, `id_rsa`, etc.
-
-Reference: `.claude/hooks/HOOKS-README.md`.
-
----
-
-## MCP servers
-
-Wired in `.mcp.json`:
-
-- `playwright` — browser automation
-- `context7` — up-to-date library documentation lookup
-- `deepwiki` — knowledge base search
-
-Servers register on `claude` startup; verify with `/mcp`.
-
----
-
-## Token-efficient tool routing
-
-`.claude/rules/rtk.md` and `.claude/rules/context-mode.md` describe routing
-rules Claude must follow. Summary:
-
-| Operation | Tool |
-|---|---|
-| Short shell output (< 20 lines) | `rtk <cmd>` |
-| Large shell output / analysis | `ctx_execute(language, code)` |
-| Web fetch | `ctx_fetch_and_index(url, source)` → `ctx_search(queries)` |
-| Multi-command in parallel | `ctx_batch_execute(commands, queries)` |
-
----
-
-## Repository layout
+## Layout
 
 ```
-CLAUDE.md                          # primary instructions, < 140 lines
-PROJECT_RULES.md                   # project-specific stack & conventions
+CLAUDE.md                          # always-loaded rules
+PROJECT_RULES.md                   # project-specific rules (filled by setup.sh or /adopt-project)
 README.md                          # this file
-.mcp.json                          # MCP server registry
+.gitignore
+.mcp.json                          # context7, playwright, deepwiki
 
 .claude/
-  settings.json                    # permissions, hooks, statusline, env
-  agents/                          # general-purpose subagents (6)
-    rpi/                           # RPI specialist agents (8)
-    workflows/best-practice/       # drift-tracking agents (5)
-  agent-memory/                    # per-agent persistent state
-  commands/
-    rpi/                           # /rpi:research|plan|implement
-    workflows/best-practice/       # /workflow-* drift-tracking
-  hooks/
-    config/hooks-config.json       # per-event toggles
-    scripts/hooks.py               # central handler (27 events)
-    HOOKS-README.md
-  rules/                           # lazy-loaded via paths: frontmatter
-    context-mode.md, rtk.md, security.md, testing.md, markdown-docs.md
-  templates/                       # project-profile, tech-stack
-  skills/                          # custom skills (project-specific)
+    agents/                        # 6 general + 3 domain + 8 RPI subagents
+        architect.md
+        backend.md                 # NEW
+        database.md                # NEW
+        debugger.md
+        frontend.md                # NEW
+        implementer.md
+        reviewer.md
+        security-reviewer.md
+        tester.md
+        rpi/                       # 8 RPI specialists
 
-state/                             # context, tasks, decisions, progress
-changelog/best-practice/           # drift-tracking output
-best-practice/                     # 8 official-feature reference docs
-implementation/                    # 5 hands-on implementation guides
-reports/                           # 4 deep-dive analyses
-development-workflows/rpi/         # RPI workflow guide
-scripts/verify-harness.sh          # structural sanity check
+    commands/
+        adopt-project.md           # /adopt-project
+        rpi/                       # /rpi:research /rpi:plan /rpi:implement
+
+    skills/                        # 12 invocable skills
+        planning-and-task-breakdown.md
+        test-driven-development.md
+        incremental-implementation.md
+        context-engineering.md
+        source-driven-development.md
+        debugging-and-error-recovery.md
+        code-review-and-quality.md
+        code-simplification.md
+        security-and-hardening.md
+        performance-optimization.md
+        git-workflow-and-versioning.md
+        documentation-and-adrs.md
+
+    rules/
+        karpathy-principles.md     # always-loaded
+        claude-mem.md              # always-loaded
+        rtk.md                     # lazy
+        markdown-docs.md
+        security.md
+        testing.md
+
+    hooks/                         # 27-event Python handler
+        scripts/hooks.py
+        config/hooks-config.json
+        HOOKS-README.md
+
+    templates/
+    settings.json                  # hardened: pre-authorize safe + block dangerous
+
+state/
+    context.md  tasks.md  decisions.md  progress.md  plans/
+
+scripts/
+    setup.sh                       # new project bootstrap
+    adopt.sh                       # adopt existing project
+    worktree.sh                    # parallel feature checkouts
+    verify-harness.sh              # self-check
 ```
 
 ---
 
-## Adapting the harness
+## Active hooks
 
-| You want to … | Do this |
+| Event | What it does | Toggle |
+|---|---|---|
+| PreToolUse | Block `rm -rf`, force-push, `reset --hard`, etc. + protect `.env`, keys | `safety.blockDestructive`, `safety.protectSecrets` |
+| PostToolUse | Auto-format edited files (ruff, prettier, gofmt, rustfmt — silent if missing) | `safety.autoFormat` |
+| Stop | Print verification reminder before declaring done | `safety.verificationReminder` |
+
+All toggles in `.claude/hooks/config/hooks-config.json` (or `.local.json` per machine).
+
+---
+
+## Quick reference
+
+| Need | Action |
 |---|---|
-| Add project-specific stack rules | Edit `PROJECT_RULES.md` |
-| Add path-specific rules | Create `.claude/rules/<name>.md` with `paths:` frontmatter |
-| Add a slash command | Create `.claude/commands/<name>.md` |
-| Add a subagent | Create `.claude/agents/<name>.md` with frontmatter |
-| Persist agent state across sessions | Create `.claude/agent-memory/<agent>/MEMORY.md` |
-| Enable a lifecycle hook | Set `disable<Event>Hook: false` in `hooks-config.json`, extend handler |
-| Add component-specific rules | Drop a `CLAUDE.md` in the subdirectory |
+| New project setup | `./scripts/setup.sh` |
+| Adopt existing project | `./scripts/adopt.sh /path/to/project` then `/adopt-project` in Claude |
+| Parallel branch work | `./scripts/worktree.sh add <branch>` |
+| Verify the harness | `./scripts/verify-harness.sh` |
+| Plan a feature | `/rpi:plan` (or `/rpi:research` first if uncertain) |
+| Implement a plan | `/rpi:implement` |
+| Recall prior session | claude-mem `search("topic")` MCP tool |
+| Tool routing | `.claude/rules/rtk.md`, `.claude/rules/claude-mem.md` |
+| Discipline rules | `.claude/rules/karpathy-principles.md` (always loaded) |
+| Hook details | `.claude/hooks/HOOKS-README.md` |
 
 ---
 
-## Verification
+## Why this harness
 
-```bash
-bash scripts/verify-harness.sh
-python3 .claude/hooks/scripts/hooks.py --self-test
-python3 -m json.tool .claude/settings.json > /dev/null
-python3 -m json.tool .mcp.json > /dev/null
-```
+1. **Drop-in:** copy the dir, run one script, productive in 5 min.
+2. **Self-adopting:** for existing projects, `/adopt-project` reads your code
+   and configures itself — no manual filling of templates.
+3. **Discipline-by-default:** Karpathy's 4 principles + 12 skills with
+   anti-rationalization tables stop common LLM failure modes.
+4. **Token-efficient:** RTK auto-shrinks every Bash call by 60–90 %; claude-mem
+   recalls prior sessions without dumping logs into context.
+5. **Safe:** PreToolUse hook blocks the things you'd regret; secrets paths
+   are unreadable by default.
+6. **Parallel-ready:** worktree helper for running multiple Claude Code
+   sessions on different branches with no conflicts.
 
 ---
 
-## Reference
+## Customising
 
-- `best-practice/` — official feature reference (commands, settings, skills,
-  subagents, memory, MCP, CLI flags, power-ups)
-- `implementation/` — hands-on patterns (subagents, skills, commands, agent
-  teams, scheduled tasks)
-- `reports/` — deep dives (`why-harness-is-important.md`,
-  `claude-agent-command-skill.md`, `claude-agent-memory.md`,
-  `claude-global-vs-project-settings.md`)
-- `development-workflows/rpi/rpi-workflow.md` — full RPI walkthrough
+Everything is meant to be edited:
+- **Rules:** add files to `.claude/rules/` with `paths:` frontmatter to scope them
+- **Agents:** edit / add markdown files in `.claude/agents/`
+- **Skills:** add `.md` files to `.claude/skills/` — invoke via `Skill` tool
+- **Commands:** add `.md` files to `.claude/commands/` — they become slash commands
+- **Hooks:** edit `.claude/hooks/scripts/hooks.py` and `config/hooks-config.json`
+
+When a pattern repeats across 2-3 projects, fold it back here.

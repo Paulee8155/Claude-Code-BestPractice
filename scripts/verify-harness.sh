@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # verify-harness.sh — validates the harness structure and key invariants.
-# Run after applying the harness to any project, or after evolve-harness.
-# Exit 0 = all checks pass. Exit 1 = failures found.
+# Run after applying the harness to any project. Exit 0 = pass, 1 = failures.
 
 set -euo pipefail
 
@@ -18,7 +17,7 @@ check_file() {
     local f="$ROOT/$1"
     local desc="${2:-$1}"
     if [[ -f "$f" ]]; then
-        green "$desc exists"
+        green "$desc"
         PASS=$((PASS+1))
     else
         red "$desc missing: $1"
@@ -29,7 +28,7 @@ check_dir() {
     local d="$ROOT/$1"
     local desc="${2:-$1}"
     if [[ -d "$d" ]]; then
-        green "$desc exists"
+        green "$desc"
         PASS=$((PASS+1))
     else
         red "$desc missing: $1"
@@ -46,18 +45,18 @@ check_frontmatter() {
     fi
 }
 
-echo ""
+echo
 echo "═══════════════════════════════════════"
-echo "  Harness Verification"
-echo "  $(date '+%Y-%m-%d %H:%M')"
+echo "  Harness Verification — $(date '+%Y-%m-%d %H:%M')"
 echo "═══════════════════════════════════════"
-echo ""
 
-echo "── Core Files ──"
+echo
+echo "── Core files ──"
 check_file "CLAUDE.md"
 check_file "PROJECT_RULES.md"
 check_file "README.md"
 check_file ".mcp.json"
+check_file ".gitignore"
 
 if [[ -f "$ROOT/CLAUDE.md" ]]; then
     lines=$(wc -l < "$ROOT/CLAUDE.md")
@@ -69,60 +68,48 @@ if [[ -f "$ROOT/CLAUDE.md" ]]; then
     fi
 fi
 
-echo ""
-echo "── RPI Workflow ──"
-for cmd in research plan implement; do
-    check_file ".claude/commands/rpi/$cmd.md" "command: /rpi:$cmd"
-done
-RPI_AGENTS=(senior-software-engineer product-manager ux-designer requirement-parser \
-            technical-cto-advisor code-reviewer constitutional-validator \
-            documentation-analyst-writer)
-for agent in "${RPI_AGENTS[@]}"; do
-    f=".claude/agents/rpi/$agent.md"
-    check_file "$f" "rpi-agent: $agent"
-    if [[ -f "$ROOT/$f" ]]; then
-        check_frontmatter "$f" "name"
-        check_frontmatter "$f" "description"
-    fi
-done
-check_file "development-workflows/rpi/rpi-workflow.md"
-
-echo ""
-echo "── Drift-Tracking Workflows ──"
-DRIFT_TOPICS=(concepts claude-commands claude-settings claude-skills claude-subagents)
-for t in "${DRIFT_TOPICS[@]}"; do
-    case "$t" in
-        concepts) cmd_name="workflow-concepts" ;;
-        *)        cmd_name="workflow-$t" ;;
-    esac
-    check_file ".claude/commands/workflows/best-practice/$cmd_name.md" "command: /$cmd_name"
-    check_file ".claude/agents/workflows/best-practice/${cmd_name}-agent.md" "agent: ${cmd_name}-agent"
-    check_file "changelog/best-practice/$t/changelog.md" "changelog: $t"
+echo
+echo "── Rules ──"
+for r in karpathy-principles claude-mem rtk security testing markdown-docs; do
+    check_file ".claude/rules/$r.md"
 done
 
-echo ""
-echo "── General-Purpose Agents ──"
-AGENTS=(architect reviewer security-reviewer tester implementer debugger)
-for agent in "${AGENTS[@]}"; do
-    f=".claude/agents/$agent.md"
-    check_file "$f" "agent: $agent"
-    if [[ -f "$ROOT/$f" ]]; then
-        check_frontmatter "$f" "name"
-        check_frontmatter "$f" "description"
-    fi
+echo
+echo "── Skills (12 expected) ──"
+SKILLS=(planning-and-task-breakdown test-driven-development incremental-implementation \
+        context-engineering source-driven-development debugging-and-error-recovery \
+        code-review-and-quality code-simplification security-and-hardening \
+        performance-optimization git-workflow-and-versioning documentation-and-adrs)
+for s in "${SKILLS[@]}"; do
+    f=".claude/skills/$s.md"
+    check_file "$f"
+    [[ -f "$ROOT/$f" ]] && check_frontmatter "$f" "name" && check_frontmatter "$f" "description"
 done
 
-echo ""
+echo
+echo "── Agents ──"
+GENERAL_AGENTS=(architect debugger reviewer security-reviewer tester implementer \
+                frontend backend database)
+for a in "${GENERAL_AGENTS[@]}"; do
+    f=".claude/agents/$a.md"
+    check_file "$f"
+    [[ -f "$ROOT/$f" ]] && check_frontmatter "$f" "name" && check_frontmatter "$f" "description"
+done
+check_dir ".claude/agents/rpi" "rpi agents directory"
+
+echo
+echo "── Commands ──"
+for c in research plan implement; do
+    check_file ".claude/commands/rpi/$c.md" "/rpi:$c"
+done
+check_file ".claude/commands/adopt-project.md" "/adopt-project"
+
+echo
 echo "── Hooks ──"
 check_file ".claude/hooks/HOOKS-README.md"
 check_file ".claude/hooks/scripts/hooks.py"
 check_file ".claude/hooks/config/hooks-config.json"
-if [[ -x "$ROOT/.claude/hooks/scripts/hooks.py" ]]; then
-    green "hooks.py is executable"
-    PASS=$((PASS+1))
-else
-    warn "hooks.py is not executable (run: chmod +x .claude/hooks/scripts/hooks.py)"
-fi
+
 if command -v python3 >/dev/null 2>&1; then
     if python3 "$ROOT/.claude/hooks/scripts/hooks.py" --self-test >/dev/null 2>&1; then
         green "hooks.py --self-test passes"
@@ -134,17 +121,17 @@ else
     warn "python3 not on PATH — cannot run --self-test"
 fi
 
-echo ""
+echo
 echo "── Settings ──"
 check_file ".claude/settings.json"
-if [[ -f "$ROOT/.claude/settings.json" ]]; then
+if [[ -f "$ROOT/.claude/settings.json" ]] && command -v python3 >/dev/null 2>&1; then
     if python3 -m json.tool "$ROOT/.claude/settings.json" > /dev/null 2>&1; then
-        green "settings.json is valid JSON"
+        green "settings.json: valid JSON"
         PASS=$((PASS+1))
     else
-        red "settings.json is invalid JSON"
+        red "settings.json: invalid JSON"
     fi
-    for ev in PreToolUse PostToolUse SessionStart PreCompact SubagentStart Stop; do
+    for ev in PreToolUse PostToolUse SessionStart Stop; do
         if grep -q "\"$ev\"" "$ROOT/.claude/settings.json"; then
             PASS=$((PASS+1))
         else
@@ -152,66 +139,75 @@ if [[ -f "$ROOT/.claude/settings.json" ]]; then
         fi
     done
 fi
-
-if [[ -f "$ROOT/.mcp.json" ]]; then
+if [[ -f "$ROOT/.mcp.json" ]] && command -v python3 >/dev/null 2>&1; then
     if python3 -m json.tool "$ROOT/.mcp.json" > /dev/null 2>&1; then
-        green ".mcp.json is valid JSON"
+        green ".mcp.json: valid JSON"
         PASS=$((PASS+1))
     else
-        red ".mcp.json is invalid JSON"
+        red ".mcp.json: invalid JSON"
     fi
 fi
 
-echo ""
-echo "── Rules ──"
-check_file ".claude/rules/context-mode.md"
-check_file ".claude/rules/rtk.md"
-check_file ".claude/rules/security.md"
-check_file ".claude/rules/testing.md"
-check_file ".claude/rules/markdown-docs.md"
+echo
+echo "── State files ──"
+for s in context tasks decisions progress; do
+    check_file "state/$s.md"
+done
+check_dir "state/plans"
 
-echo ""
-echo "── State Files ──"
-check_file "state/context.md"
-check_file "state/tasks.md"
-check_file "state/decisions.md"
-check_file "state/progress.md"
-
-echo ""
-echo "── Reference Docs ──"
-check_dir "best-practice"
-check_dir "implementation"
-check_dir "reports"
-
-echo ""
-echo "── Agent Memory ──"
-check_dir ".claude/agent-memory"
-check_file ".claude/agent-memory/README.md"
-
-echo ""
+echo
 echo "── Templates ──"
 check_file ".claude/templates/project-profile.md"
 check_file ".claude/templates/tech-stack.md"
 
-echo ""
+echo
 echo "── Scripts ──"
-check_file "scripts/verify-harness.sh"
+for s in setup.sh adopt.sh worktree.sh verify-harness.sh; do
+    f="scripts/$s"
+    check_file "$f"
+    if [[ -f "$ROOT/$f" ]]; then
+        if [[ -x "$ROOT/$f" ]]; then
+            green "$f executable"
+            PASS=$((PASS+1))
+        else
+            warn "$f not executable (chmod +x scripts/$s)"
+        fi
+        if bash -n "$ROOT/$f" 2>/dev/null; then
+            green "$f bash syntax OK"
+            PASS=$((PASS+1))
+        else
+            red "$f has bash syntax error"
+        fi
+    fi
+done
 
-echo ""
-echo "── Stale Files (must NOT exist) ──"
+echo
+echo "── Tool prerequisites (warnings only) ──"
+for t in git rtk bun python3; do
+    if command -v "$t" >/dev/null 2>&1; then
+        green "$t available"
+        PASS=$((PASS+1))
+    else
+        warn "$t not on PATH — install for full functionality"
+    fi
+done
+if [[ -d "$HOME/.claude-mem" ]]; then
+    green "claude-mem installed"
+    PASS=$((PASS+1))
+else
+    warn "claude-mem not installed — run: npx claude-mem install"
+fi
+
+echo
+echo "── Stale paths (must NOT exist) ──"
 STALE=(
-    ".claude/hooks/block-destructive.sh"
-    ".claude/hooks/protect-secrets.sh"
-    ".claude/commands/plan-feature.md"
-    ".claude/commands/implement-feature.md"
-    ".claude/commands/review-work.md"
-    ".claude/commands/onboard-project.md"
-    ".claude/commands/evolve-harness.md"
-    ".claude/skills/feature-planning"
-    ".claude/skills/implementation-loop"
-    ".claude/skills/review-gate"
-    "docs/context.md"
-    "docs/tasks.md"
+    ".claude/rules/context-mode.md"
+    ".claude/commands/workflows"
+    "best-practice"
+    "changelog"
+    "development-workflows"
+    "implementation"
+    "reports"
 )
 for s in "${STALE[@]}"; do
     if [[ -e "$ROOT/$s" ]]; then
@@ -221,16 +217,16 @@ for s in "${STALE[@]}"; do
     fi
 done
 
-echo ""
+echo
 echo "═══════════════════════════════════════"
 echo "  Results: $PASS passed · $FAIL failed · $WARNS warnings"
 echo "═══════════════════════════════════════"
-echo ""
+echo
 
 if [[ $FAIL -gt 0 ]]; then
-    echo "  FAIL — fix the issues above before using this harness."
+    echo "  FAIL — fix the issues above."
     exit 1
 else
-    echo "  PASS — harness looks good."
+    echo "  PASS — harness is intact."
     exit 0
 fi

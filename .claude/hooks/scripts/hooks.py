@@ -155,12 +155,86 @@ def handle_PreToolUse(payload: dict, cfg: dict) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# Auto-format (PostToolUse on Write/Edit)
+# ---------------------------------------------------------------------------
+
+import shutil
+import subprocess
+
+FORMATTERS = {
+    ".py":   ["ruff", "format"],
+    ".ts":   ["prettier", "--write"],
+    ".tsx":  ["prettier", "--write"],
+    ".js":   ["prettier", "--write"],
+    ".jsx":  ["prettier", "--write"],
+    ".json": ["prettier", "--write"],
+    ".md":   ["prettier", "--write"],
+    ".go":   ["gofmt", "-w"],
+    ".rs":   ["rustfmt"],
+}
+
+
+def auto_format(payload: dict) -> None:
+    """Best-effort format on Write/Edit. Silent if formatter missing."""
+    tool = payload.get("tool_name") or payload.get("tool") or ""
+    if tool not in ("Write", "Edit", "NotebookEdit"):
+        return
+    target = (payload.get("tool_input", {}) or {}).get("file_path") or ""
+    if not target or not os.path.isfile(target):
+        return
+    ext = os.path.splitext(target)[1].lower()
+    cmd_template = FORMATTERS.get(ext)
+    if not cmd_template:
+        return
+    binary = cmd_template[0]
+    if not shutil.which(binary):
+        return
+    try:
+        subprocess.run(
+            [*cmd_template, target],
+            timeout=10,
+            capture_output=True,
+            check=False,
+        )
+    except Exception:
+        pass  # never break the hook chain on format failure
+
+
+def handle_PostToolUse(payload: dict, cfg: dict) -> int:
+    if cfg.get("safety", {}).get("autoFormat", True):
+        auto_format(payload)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Verification reminder (Stop event)
+# ---------------------------------------------------------------------------
+
+VERIFICATION_REMINDER = """
+[harness] Before declaring done, verify:
+  1. Tests run + green (not just "should pass")
+  2. The actual feature/fix was exercised (not just compiled)
+  3. No new errors in logs / console
+  4. state/tasks.md updated if multi-step work
+See .claude/rules/karpathy-principles.md (Goal-Driven Execution).
+"""
+
+
+def handle_Stop(payload: dict, cfg: dict) -> int:
+    if cfg.get("safety", {}).get("verificationReminder", True):
+        print(VERIFICATION_REMINDER, file=sys.stderr)
+    return 0
+
+
 def _noop(_payload: dict, _cfg: dict) -> int:  # placeholder for future logic
     return 0
 
 
 HANDLERS = {
     "PreToolUse": handle_PreToolUse,
+    "PostToolUse": handle_PostToolUse,
+    "Stop": handle_Stop,
 }
 for _e in EVENTS:
     HANDLERS.setdefault(_e, _noop)

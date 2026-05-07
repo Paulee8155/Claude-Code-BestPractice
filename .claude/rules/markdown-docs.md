@@ -19,8 +19,7 @@ project.
 
 ## Links & paths
 
-- **Use relative links** (`../reports/why-harness-is-important.md`) — never raw
-  GitHub URLs for in-repo files.
+- **Use relative links** (`../state/context.md`) — never raw GitHub URLs for in-repo files.
 - External references go in a dedicated section at the bottom.
 - When linking code, use `path:line` form (`.claude/hooks/scripts/hooks.py:42`).
 
@@ -64,7 +63,5 @@ project.
 
 ## What does **not** belong in markdown
 
-- Running plans, todo lists, or transient session state — those go in
-  `state/` or `reports/`.
-- Generated content (changelogs, drift reports) — keep the source of truth in
-  `changelog/`, link to it.
+- Running plans, todo lists, or transient session state — those go in `state/`.
+- Generated content — link to its source of truth, do not duplicate.
