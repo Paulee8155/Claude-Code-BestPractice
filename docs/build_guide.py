@@ -222,6 +222,8 @@ CMD_CHEAT = [
     ["Neues Feature planen", "/plan", "Anforderungen, Risiken, Schritte — wartet auf dein OK"],
     ["Feature umsetzen", "/feature-dev", "nutzt Skills/Agents, TDD zuerst"],
     ["Projekt ECC-ready machen", "/ecc-onboard", "Stack erkennen → 1× OK → Rules/Skills + PROJECT_RULES.md + state/"],
+    ["Codebase kartieren (1×)", "/update-codemaps", "token-arme Architektur-Karten in docs/CODEMAPS/ — statt neu suchen"],
+    ["Fremdes Repo verstehen", "Skill codebase-onboarding", "Entry-Points, Konventionen, Starter-CLAUDE.md"],
     ["Code geschrieben", "/code-review  (+ /python-review, /go-review …)", "Qualität + Security der Änderungen"],
     ["Build/Tests rot", "/build-fix", "inkrementelle, minimale Fixes"],
     ["Coverage / Qualität", "/test-coverage  ·  /quality-gate", "Lücken finden, Pipeline prüfen"],
@@ -308,7 +310,7 @@ def build_docx():
     add_bullets(doc, [
         "1 · Was ist dieses Harness?", "2 · Setup & VPS-Architektur (global, RTK, Koexistenz)",
         "3 · Mentales Modell — die Bausteine", "4 · Täglicher Workflow: die 5-Phasen-Pipeline",
-        "5 · Projekt-Onboarding mit /ecc-onboard", "6 · Cheat-Sheet: Wann welcher Command",
+        "5 · Onboarding & Codebase einmal erkunden (Codemaps)", "6 · Cheat-Sheet: Wann welcher Command",
         "7 · Wann welcher MCP", "8 · Token-Ökonomie & Modellstrategie",
         "9 · Memory & Sessions", "10 · Continuous Learning (Self-Improvement)",
         "11 · Parallelisierung", "12 · Security im Alltag + VPS-Hinweise",
@@ -380,19 +382,52 @@ def build_docx():
     ])
 
     # 5
-    add_heading(doc, "5 · Projekt-Onboarding mit /ecc-onboard", 1)
-    add_para(doc, "Ein einziger Command macht ein beliebiges Projekt ECC-ready — Auto-Detect, ein OK, fertig. Er "
-                  "orchestriert Stack-Detection, den ECC-Installer (project-level) und das state/-Pattern:")
-    add_table(doc, ["Schritt", "Was passiert", "Ergebnis"], [
-        ["1 · Detect", "Stack aus package.json / pyproject.toml / go.mod … erkennen", "Profil + Sprach-Packs"],
-        ["2 · Dry-Run", "install-plan/-apply --target claude-project --dry-run", "Plan ohne Schreiben"],
-        ["3 · Bestätigung", "1× OK des Users (AskUserQuestion)", "Freigabe"],
+    add_heading(doc, "5 · Projekt-Onboarding & Codebase einmal erkunden", 1)
+    add_para(doc, "Die teuerste Verschwendung ist, die Codebase in jeder Session neu zu durchsuchen. ECC-Prinzip: "
+                  "EINMAL erkunden, das Ergebnis in Dateien festhalten, danach immer die kompakte Karte lesen statt "
+                  "den ganzen Code. Drei Ebenen — projektweit einrichten, Architektur kartieren, pro Aufgabe recherchieren:",
+                  space=2)
+
+    add_para(doc, "a) Projekt ECC-ready machen — /ecc-onboard (einmalig je Projekt)", bold=True, color=INDIGO, space=2)
+    add_para(doc, "Ein Command, ein OK: erkennt den Stack, installiert ECC project-level und legt persistente "
+                  "Projekt-Dateien an, die Claude künftig zuerst liest.")
+    add_table(doc, ["Schritt", "Was passiert", "Ergebnis (persistent)"], [
+        ["1 · Detect", "Stack aus package.json / go.mod / pyproject.toml … erkennen", "Profil + Sprach-Packs"],
+        ["2 · Dry-Run", "install-apply --target claude-project --dry-run", "Plan ohne Schreiben"],
+        ["3 · Bestätigung", "1× OK des Users", "Freigabe"],
         ["4 · Install", "install-apply --target claude-project", ".claude/rules/ecc/ + skills/ecc/"],
-        ["5 · Kontext", "Templates füllen (echte Projektwerte)", "PROJECT_RULES.md + state/*"],
-    ], widths=[1.5, 3.0, 2.3])
-    add_callout(doc, "Wichtig:", "Aus dem Zielprojekt-Verzeichnis ausführen — der project-level Install landet im "
-                "aktuellen cwd. /ecc-onboard ist idempotent: erneutes Ausführen merged, überschreibt nichts blind.",
+        ["5 · Kontext", "Templates mit echten Werten füllen", "PROJECT_RULES.md + state/*"],
+    ], widths=[1.3, 3.4, 2.1])
+    add_para(doc, "Aus dem Zielprojekt-Verzeichnis ausführen (Install landet im aktuellen cwd). Idempotent: erneut "
+                  "ausführen merged, überschreibt nichts blind.", italic=True, color=MUTED, size=9.5)
+
+    add_para(doc, "b) Architektur kartieren — /update-codemaps  (KERN-FEATURE)", bold=True, color=INDIGO, space=2)
+    add_para(doc, "Scannt die Struktur EINMAL und schreibt token-arme Architektur-Karten auf Platte. In späteren "
+                  "Sessions liest Claude die kompakte Karte (billig) statt die ganze Codebase neu zu durchsuchen.")
+    add_table(doc, ["Datei (in docs/CODEMAPS/)", "Inhalt"], [
+        ["architecture.md", "System-Diagramm, Service-Grenzen, Datenfluss"],
+        ["backend.md", "Routes → Controller → Service → Repository"],
+        ["frontend.md", "Page-Tree, Komponenten-Hierarchie, State-Flow"],
+        ["data.md", "Tabellen, Relationen, Migrations-Historie"],
+        ["dependencies.md", "externe Dienste, Third-Party-Integrationen"],
+    ], widths=[2.4, 4.4])
+    add_callout(doc, "Wann neu bauen?", "Codemaps sind ein Snapshot — sie aktualisieren sich nicht von selbst. Nach "
+                "größeren Architektur-Änderungen /update-codemaps erneut laufen lassen. Erstes Mal in einem fremden "
+                "Repo: Skill codebase-onboarding erzeugt zusätzlich Entry-Points, Konventionen + Starter-CLAUDE.md.",
                 color=INDIGO_D, fill=SURFACE)
+
+    add_para(doc, "c) Pro Aufgabe recherchieren — research.md-Pattern", bold=True, color=INDIGO, space=2)
+    add_bullets(doc, [
+        ("Phase-1-Output in Datei:", "Ein Explore-/code-explorer-Agent kartiert die für DIE Aufgabe relevanten "
+         "Dateien/Muster → research.md. Das wird Input für /plan."),
+        ("code-tour (optional):", "Erzeugt wiederverwendbare .tour-Dateien (öffnen direkt Datei+Zeile) — ideal für "
+         "Onboarding neuer Mitarbeiter oder Architektur-Walkthroughs."),
+        ("claude-mem ergänzt:", "Injiziert relevanten Kontext aus früheren Sessions ab der 2. Session automatisch — "
+         "Erinnerung ohne Zutun. /mem-search für gezielte Treffer („schon mal gelöst?\")."),
+    ])
+    add_callout(doc, "Die Regel dahinter:", "„In Dateien speichern, nicht im Kopf behalten.\" research.md → plan.md → "
+                "review.md, dazwischen /clear. Codemaps + PROJECT_RULES.md + state/ sind die dauerhafte Landkarte; "
+                "der Chat-Kontext bleibt schlank.", color=INDIGO_D, fill=SURFACE)
 
     # 6
     add_heading(doc, "6 · Cheat-Sheet — wann welcher Command", 1)
@@ -654,7 +689,7 @@ def build_pptx():
     _bullet(tf, "Subagents immer objektiven Kontext mitgeben, nicht nur die Frage.", size=15)
 
     # --- /ecc-onboard
-    s = prs.slides.add_slide(blank); _title(s, "5 · Projekt-Onboarding mit /ecc-onboard")
+    s = prs.slides.add_slide(blank); _title(s, "5a · Projekt-Onboarding mit /ecc-onboard")
     _table(s, ["Schritt", "Was passiert", "Ergebnis"], [
         ["1 · Detect", "Stack erkennen (package.json, go.mod …)", "Profil + Sprach-Packs"],
         ["2 · Dry-Run", "install-apply --target claude-project --dry-run", "Plan ohne Schreiben"],
@@ -666,8 +701,27 @@ def build_pptx():
     _bullet(tf, "Aus dem Zielprojekt ausführen — Install landet im aktuellen cwd.", size=16, color=P_INDIGO, bold=True, first=True)
     _bullet(tf, "Idempotent: erneut ausführen merged, überschreibt nichts blind.", size=16, color=P_INDIGO)
 
+    # --- Codebase einmal erkunden (Codemaps)
+    s = prs.slides.add_slide(blank); _title(s, "5b · Codebase EINMAL erkunden (Codemaps)")
+    tf = _box(s, 0.7, 1.35, 12.0, 1.2)
+    _bullet(tf, "Prinzip: einmal kartieren → in Dateien festhalten → künftig die Karte lesen statt neu suchen.",
+            size=16, color=P_INDIGO, bold=True, first=True)
+    _bullet(tf, "/update-codemaps schreibt token-arme Architektur-Karten nach docs/CODEMAPS/:", size=14)
+    _table(s, ["Datei", "Inhalt"], [
+        ["architecture.md", "System-Diagramm, Service-Grenzen, Datenfluss"],
+        ["backend.md", "Routes → Controller → Service → Repository"],
+        ["frontend.md", "Page-Tree, Komponenten, State-Flow"],
+        ["data.md", "Tabellen, Relationen, Migrationen"],
+        ["dependencies.md", "externe Dienste, Integrationen"],
+    ], 0.7, 2.7, 12.0, 2.9, col_w=[3.0, 9.0], fsize=12)
+    tf = _box(s, 0.7, 5.8, 12.0, 1.3)
+    _bullet(tf, "Snapshot — nach Architektur-Änderung neu bauen. Fremdes Repo: Skill codebase-onboarding.",
+            size=14, color=P_AMBER, bold=True, first=True)
+    _bullet(tf, "Pro Aufgabe: research.md (Explore-Agent) → /plan. claude-mem injiziert Alt-Kontext automatisch.",
+            size=14, color=P_MUTED)
+
     # --- Command Cheat-Sheet (gesplittet auf 2 Folien)
-    half = 7
+    half = 8
     for idx, chunk in enumerate([CMD_CHEAT[:half], CMD_CHEAT[half:]]):
         s = prs.slides.add_slide(blank)
         _title(s, "6 · Cheat-Sheet — wann welcher Command" + (" (1/2)" if idx == 0 else " (2/2)"))
