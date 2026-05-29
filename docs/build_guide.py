@@ -5,7 +5,8 @@ build_guide.py — Erzeugt das fusionierte Harness-Begleitdokument als Word (.do
 und PowerPoint (.pptx) aus einer gemeinsamen, deutschen Inhaltsquelle.
 
 Quelle: ECC-Guides (the-shortform/longform/security, ECC-WORKFLOW-GUIDE.de.md) +
-BestPractice RPI-Workflow. Spiegelt die VPS-weite, globale Installation wider.
+BestPractice-Extras (/ecc-onboard, state/-Pattern, Karpathy). Spiegelt die VPS-weite,
+globale Installation wider — ECC ist führend, RPI/context-mode entfernt.
 
 Aufruf:  python3 docs/build_guide.py
 Ausgabe: docs/ECC-Harness-Guide.de.docx  und  docs/ECC-Harness-Guide.de.pptx
@@ -218,9 +219,9 @@ BUILDING_BLOCKS = [
 ]
 
 CMD_CHEAT = [
-    ["Neues Feature planen", "/plan  oder  /rpi:research → /rpi:plan", "Anforderungen, Risiken, Schritte — wartet auf dein OK"],
-    ["Feature umsetzen", "/feature-dev  ·  /rpi:implement", "nutzt Skills/Agents, TDD zuerst"],
-    ["Bestehendes Projekt adoptieren", "/adopt-project", "liest Codebase, füllt state/ & Regeln (BP-Extra)"],
+    ["Neues Feature planen", "/plan", "Anforderungen, Risiken, Schritte — wartet auf dein OK"],
+    ["Feature umsetzen", "/feature-dev", "nutzt Skills/Agents, TDD zuerst"],
+    ["Projekt ECC-ready machen", "/ecc-onboard", "Stack erkennen → 1× OK → Rules/Skills + PROJECT_RULES.md + state/"],
     ["Code geschrieben", "/code-review  (+ /python-review, /go-review …)", "Qualität + Security der Änderungen"],
     ["Build/Tests rot", "/build-fix", "inkrementelle, minimale Fixes"],
     ["Coverage / Qualität", "/test-coverage  ·  /quality-gate", "Lücken finden, Pipeline prüfen"],
@@ -243,7 +244,7 @@ MCP_ROWS = [
     ["Strukturierter Wissensgraph", "memory", "Laufzeit-Memory (mit claude-mem abstimmen)"],
     ["Schrittweises Reasoning", "sequential-thinking", "komplexe Mehrschritt-Probleme"],
     ["Bash-Token sparen (lokal)", "RTK-Hook", "60–90 % Ersparnis, läuft transparent global"],
-    ["Recherche/Analyse (Sandbox)", "context-mode (ctx_*)", "dein bestehendes Tool, bleibt primär"],
+    ["Frühere Arbeit / „schon gelöst?\"", "claude-mem (/mem-search)", "cross-session Memory, injiziert Kontext automatisch"],
 ]
 
 SECURITY_ACTIVE = [
@@ -293,7 +294,7 @@ def build_docx():
     rs.font.size = Pt(15)
     rs.font.color.rgb = INK
     meta = doc.add_paragraph()
-    rm = meta.add_run("Global aktiv in ~/.claude · ECC 2.0.0-rc.1 (core) + RPI-Workflow · RTK-sicher\n"
+    rm = meta.add_run("Global aktiv in ~/.claude · ECC 2.0.0-rc.1 (core, führend) · RTK-sicher\n"
                       "Quelle/Re-Install: /root/projekte/Claude Code BestPractice  →  ./install-vps.sh")
     rm.font.size = Pt(10)
     rm.font.color.rgb = MUTED
@@ -307,7 +308,7 @@ def build_docx():
     add_bullets(doc, [
         "1 · Was ist dieses Harness?", "2 · Setup & VPS-Architektur (global, RTK, Koexistenz)",
         "3 · Mentales Modell — die Bausteine", "4 · Täglicher Workflow: die 5-Phasen-Pipeline",
-        "5 · RPI-Workflow (research → plan → implement)", "6 · Cheat-Sheet: Wann welcher Command",
+        "5 · Projekt-Onboarding mit /ecc-onboard", "6 · Cheat-Sheet: Wann welcher Command",
         "7 · Wann welcher MCP", "8 · Token-Ökonomie & Modellstrategie",
         "9 · Memory & Sessions", "10 · Continuous Learning (Self-Improvement)",
         "11 · Parallelisierung", "12 · Security im Alltag + VPS-Hinweise",
@@ -320,8 +321,8 @@ def build_docx():
     add_bullets(doc, [
         ("ECC (Everything Claude Code)", "von Affaan Mustafa — die dominante Engine: 63 Agents, ~79 Skills, "
          "79 Commands, 21 Sprach-Rule-Packs, manifest-basierter Installer, Continuous Learning, Security-Scanning."),
-        ("BestPractice-Extras", "die wenigen einzigartigen Stärken deines alten Harness, die ECC ergänzen: der "
-         "RPI-Workflow, /adopt-project, das state/-Pattern und die Karpathy-Prinzipien."),
+        ("BestPractice-Extras", "die wenigen einzigartigen Stärken deines alten Harness, die ECC ergänzen: "
+         "/ecc-onboard (One-Shot-Projekt-Setup), das state/-Pattern und die Karpathy-Prinzipien."),
     ])
     add_para(doc, "Philosophie in einem Satz:", bold=True, space=2)
     add_callout(doc, "„Konfiguration ist Fine-Tuning, nicht Architektur.“",
@@ -338,19 +339,20 @@ def build_docx():
     add_bullets(doc, [
         ("Namespace-sicher:", "ECC liegt unter rules/ecc/ und skills/ecc/ — keine Kollision mit Eigenem."),
         ("RTK bleibt König:", "Der globale PreToolUse:Bash-Hook (RTK, 60–90 % Token-Ersparnis) wurde NICHT angefasst."),
-        ("Startup-Config unberührt:", "settings.json / settings.local.json / CLAUDE.md sind byte-identisch geblieben."),
+        ("Startup-Config additiv:", "Der Installer lässt settings.json/CLAUDE.md unberührt. Bewusste Aufräum-Schritte "
+         "(feature-dev-Plugin deaktiviert, context-mode entfernt) wurden separat mit Backup vorgenommen."),
         ("Reproduzierbar:", "Quelle ist das Repo; Re-Install via ./install-vps.sh (idempotent, mit Backup)."),
     ])
     add_para(doc, "Koexistenz mit deinem bestehenden Setup:", bold=True, space=2)
     add_table(doc, ["Dein Tool", "ECC-Pendant", "Empfehlung"], [
         ["superpowers", "tdd-workflow, verification-loop …", "Beides nutzbar; bei Doppelung ECC bevorzugen"],
-        ["claude-mem", "/save-session, continuous-learning-v2", "EINE primäre Memory-Quelle je Projekt führen"],
+        ["claude-mem", "/save-session, continuous-learning-v2", "primäre Memory-Quelle; injiziert Kontext automatisch"],
         ["RTK", "Token-Ökonomie (§8)", "Ergänzen sich: RTK auf Bash-, ECC auf Workflow-Ebene"],
-        ["context-mode", "—", "Bleibt dein Recherche-/Analyse-Tool"],
+        ["codex / superpowers", "diverse Skills/Agents", "eigenständiger Mehrwert; bleiben aktiv"],
     ], widths=[1.4, 2.4, 3.0])
-    add_callout(doc, "Namens-Überlappung:", "Manche Commands (z. B. /code-review, /feature-dev) kommen sowohl von "
-                "einem Plugin als auch von ECC. Tippe / und prüfe die Quelle, oder nutze eindeutige ECC-Commands "
-                "(/harness-audit, /ecc-guide, /instinct-status, /rpi:*).")
+    add_callout(doc, "Aufgeräumt:", "feature-dev existierte 3-fach — die ECC-Version ist kanonisch, das gleichnamige "
+                "Plugin wurde deaktiviert. RPI wurde entfernt (redundant zu ECC). Bei Namens-Zweifeln eindeutige "
+                "ECC-Commands nutzen (/harness-audit, /ecc-guide, /ecc-onboard, /instinct-status).")
 
     # 3
     add_heading(doc, "3 · Das mentale Modell — die Bausteine", 1)
@@ -365,7 +367,7 @@ def build_docx():
     add_para(doc, "Der Erfinder arbeitet in klaren Phasen, mit /clear dazwischen und Zwischenergebnissen in Dateien "
                   "(statt alles im Kontext zu halten):")
     add_code(doc,
-             "Phase 1  RESEARCH   →  Explore-Agent / context-mode      →  research.md\n"
+             "Phase 1  RESEARCH   →  Explore-Agent / claude-mem         →  research.md\n"
              "Phase 2  PLAN       →  /plan  (wartet auf dein OK!)        →  plan.md\n"
              "Phase 3  IMPLEMENT  →  /feature-dev + Skill tdd-workflow   →  Code + Tests\n"
              "Phase 4  REVIEW     →  /code-review (+ /<sprache>-review)  →  review.md\n"
@@ -378,17 +380,19 @@ def build_docx():
     ])
 
     # 5
-    add_heading(doc, "5 · RPI-Workflow (BestPractice-Extra)", 1)
-    add_para(doc, "Der RPI-Workflow ist die strengere, gate-getriebene Variante der Pipeline — ideal für größere "
-                  "Features. Er kollidiert nicht mit ECC und ist global verfügbar:")
-    add_table(doc, ["Command", "Phase", "Liefert"], [
-        ["/rpi:research <feature>", "Research & Viability Gate", "GO/NO-GO-Entscheidung mit Begründung"],
-        ["/rpi:plan <feature>", "Planung", "umfassende Planungs-Doku"],
-        ["/rpi:implement <feature>", "Umsetzung", "phasierte Implementierung mit Validation-Gates"],
-        ["/adopt-project", "Onboarding", "liest Codebase, füllt state/ (context/decisions/progress/tasks)"],
-    ], widths=[2.1, 2.0, 2.7])
-    add_callout(doc, "Wann RPI statt /plan?", "Nimm /rpi für größere, riskante Features mit nötigem Viability-Gate. "
-                "Nimm /plan für den schnellen, normalen Plan-dann-Code-Flow.", color=INDIGO_D, fill=SURFACE)
+    add_heading(doc, "5 · Projekt-Onboarding mit /ecc-onboard", 1)
+    add_para(doc, "Ein einziger Command macht ein beliebiges Projekt ECC-ready — Auto-Detect, ein OK, fertig. Er "
+                  "orchestriert Stack-Detection, den ECC-Installer (project-level) und das state/-Pattern:")
+    add_table(doc, ["Schritt", "Was passiert", "Ergebnis"], [
+        ["1 · Detect", "Stack aus package.json / pyproject.toml / go.mod … erkennen", "Profil + Sprach-Packs"],
+        ["2 · Dry-Run", "install-plan/-apply --target claude-project --dry-run", "Plan ohne Schreiben"],
+        ["3 · Bestätigung", "1× OK des Users (AskUserQuestion)", "Freigabe"],
+        ["4 · Install", "install-apply --target claude-project", ".claude/rules/ecc/ + skills/ecc/"],
+        ["5 · Kontext", "Templates füllen (echte Projektwerte)", "PROJECT_RULES.md + state/*"],
+    ], widths=[1.5, 3.0, 2.3])
+    add_callout(doc, "Wichtig:", "Aus dem Zielprojekt-Verzeichnis ausführen — der project-level Install landet im "
+                "aktuellen cwd. /ecc-onboard ist idempotent: erneutes Ausführen merged, überschreibt nichts blind.",
+                color=INDIGO_D, fill=SURFACE)
 
     # 6
     add_heading(doc, "6 · Cheat-Sheet — wann welcher Command", 1)
@@ -490,7 +494,7 @@ def build_docx():
     ])
     add_para(doc, "TL;DR — so arbeitest du „wie der Erfinder“:", bold=True, color=INDIGO, space=2)
     add_bullets(doc, [
-        "In Phasen denken: Research → /plan (oder /rpi) → /feature-dev+TDD → /code-review → Verify, /clear dazwischen.",
+        "In Phasen denken: Research → /plan → /feature-dev+TDD → /code-review → Verify, /clear dazwischen.",
         "Kontext sauber: < 10 MCPs aktiv, billigstes ausreichendes Modell, modulare Dateien, strategisch compacten.",
         "Persistieren: /save-session am Ende, /resume-session am Anfang.",
         "Lernen lassen: /learn-eval → /evolve → /promote.",
@@ -595,7 +599,7 @@ def build_pptx():
     _set(tf, "ECC × BestPractice", size=46, color=P_WHITE, bold=True)
     tf = _box(s, 0.9, 3.25, 11.5, 1.4)
     _bullet(tf, "Das fusionierte, VPS-weite Claude-Code-Harness", size=20, color=P_WHITE, bold=True, first=True)
-    _bullet(tf, "Global aktiv in ~/.claude · ECC 2.0.0-rc.1 (core) + RPI-Workflow · RTK-sicher", size=14, color=P_MUTED)
+    _bullet(tf, "Global aktiv in ~/.claude · ECC 2.0.0-rc.1 (core, führend) · RTK-sicher", size=14, color=P_MUTED)
     _bullet(tf, "Quelle / Re-Install:  ./install-vps.sh   ·   Guides: @affaanmustafa", size=14, color=P_MUTED)
 
     # --- Section: Was ist das?
@@ -604,7 +608,7 @@ def build_pptx():
     _bullet(tf, "Fusion zweier Systeme — Fokus auf ECC:", size=18, color=P_INDIGO, bold=True, first=True)
     _bullet(tf, "ECC (Everything Claude Code) — die Engine: 63 Agents, ~79 Skills, 79 Commands, 21 Rule-Packs,", size=15, level=1)
     _bullet(tf, "manifest-Installer, Continuous Learning, Security-Scanning.", size=15, level=2)
-    _bullet(tf, "BestPractice-Extras — RPI-Workflow, /adopt-project, state/-Pattern, Karpathy-Prinzipien.", size=15, level=1)
+    _bullet(tf, "BestPractice-Extras — /ecc-onboard (One-Shot-Setup), state/-Pattern, Karpathy-Prinzipien.", size=15, level=1)
     _bullet(tf, "", size=8)
     _bullet(tf, "„Konfiguration ist Fine-Tuning, nicht Architektur.\"", size=18, color=P_AMBER, bold=True)
     _bullet(tf, "Wiederverwendbare Muster · sauberer Kontext · billigstes Modell · Verifikation mit Evidenz · Security zuerst.", size=14, color=P_MUTED)
@@ -614,13 +618,13 @@ def build_pptx():
     s = prs.slides.add_slide(blank); _title(s, "2 · Setup & VPS-Architektur")
     tf = _box(s, 0.7, 1.35, 12.0, 2.1)
     _bullet(tf, "ECC ist GLOBAL (~/.claude) → aktiv in JEDEM VPS-Projekt (WMS, Jarvis, n8n …).", size=16, color=P_INDIGO, bold=True, first=True)
-    _bullet(tf, "Namespace-sicher (rules/ecc, skills/ecc) · RTK-Hook unangetastet · settings.json byte-identisch.", size=14)
+    _bullet(tf, "Namespace-sicher (rules/ecc, skills/ecc) · RTK-Hook unangetastet · Installer additiv.", size=14)
     _bullet(tf, "Reproduzierbar: Repo = Quelle, Re-Install via ./install-vps.sh (idempotent, mit Backup).", size=14)
     _table(s, ["Dein Tool", "ECC-Pendant", "Empfehlung"], [
         ["superpowers", "tdd-workflow, verification-loop", "beides nutzbar; ECC bevorzugen"],
-        ["claude-mem", "/save-session, learning-v2", "EINE Memory-Quelle je Projekt"],
+        ["claude-mem", "/save-session, learning-v2", "primäre Memory-Quelle, auto-injiziert"],
         ["RTK", "Token-Ökonomie", "ergänzen sich (Bash- vs Workflow-Ebene)"],
-        ["context-mode", "—", "bleibt dein Recherche-Tool"],
+        ["codex / superpowers", "diverse Skills", "eigenständig; bleiben aktiv"],
     ], 0.7, 3.6, 12.0, 2.6, col_w=[2.4, 4.2, 5.4], fsize=12)
 
     # --- Mentales Modell
@@ -635,7 +639,7 @@ def build_pptx():
     cf = _box(s, 0.7, 1.45, 12.0, 2.6); _bg_shape = s.shapes.add_shape(1, PInches(0.7), PInches(1.45), PInches(12.0), PInches(2.5))
     _bg_shape.fill.solid(); _bg_shape.fill.fore_color.rgb = P_INDIGO_D; _bg_shape.line.fill.background()
     cf2 = _bg_shape.text_frame; cf2.word_wrap = True; cf2.margin_left = PInches(0.2)
-    code = ("RESEARCH   →  Explore-Agent / context-mode      →  research.md\n"
+    code = ("RESEARCH   →  Explore-Agent / claude-mem         →  research.md\n"
             "PLAN       →  /plan  (wartet auf dein OK!)        →  plan.md\n"
             "IMPLEMENT  →  /feature-dev + tdd-workflow          →  Code + Tests\n"
             "REVIEW     →  /code-review (+ /<sprache>-review)   →  review.md\n"
@@ -649,17 +653,18 @@ def build_pptx():
     _bullet(tf, "Phasen nicht überspringen. /clear zwischen großen Phasen.", size=15)
     _bullet(tf, "Subagents immer objektiven Kontext mitgeben, nicht nur die Frage.", size=15)
 
-    # --- RPI
-    s = prs.slides.add_slide(blank); _title(s, "5 · RPI-Workflow (BestPractice-Extra)")
-    _table(s, ["Command", "Phase", "Liefert"], [
-        ["/rpi:research <f>", "Viability-Gate", "GO/NO-GO mit Begründung"],
-        ["/rpi:plan <f>", "Planung", "umfassende Planungs-Doku"],
-        ["/rpi:implement <f>", "Umsetzung", "phasiert, mit Validation-Gates"],
-        ["/adopt-project", "Onboarding", "liest Codebase, füllt state/"],
-    ], 0.7, 1.5, 12.0, 3.0, col_w=[3.2, 3.0, 5.8], fsize=13)
-    tf = _box(s, 0.7, 4.8, 12.0, 1.6)
-    _bullet(tf, "Wann RPI? Größere, riskante Features mit nötigem Viability-Gate.", size=16, color=P_INDIGO, bold=True, first=True)
-    _bullet(tf, "Wann /plan? Schneller, normaler Plan-dann-Code-Flow.", size=16, color=P_INDIGO)
+    # --- /ecc-onboard
+    s = prs.slides.add_slide(blank); _title(s, "5 · Projekt-Onboarding mit /ecc-onboard")
+    _table(s, ["Schritt", "Was passiert", "Ergebnis"], [
+        ["1 · Detect", "Stack erkennen (package.json, go.mod …)", "Profil + Sprach-Packs"],
+        ["2 · Dry-Run", "install-apply --target claude-project --dry-run", "Plan ohne Schreiben"],
+        ["3 · OK", "1× Bestätigung des Users", "Freigabe"],
+        ["4 · Install", "install-apply --target claude-project", ".claude/rules/ecc + skills/ecc"],
+        ["5 · Kontext", "Templates mit echten Werten füllen", "PROJECT_RULES.md + state/"],
+    ], 0.7, 1.5, 12.0, 3.4, col_w=[2.2, 5.6, 4.2], fsize=12)
+    tf = _box(s, 0.7, 5.2, 12.0, 1.6)
+    _bullet(tf, "Aus dem Zielprojekt ausführen — Install landet im aktuellen cwd.", size=16, color=P_INDIGO, bold=True, first=True)
+    _bullet(tf, "Idempotent: erneut ausführen merged, überschreibt nichts blind.", size=16, color=P_INDIGO)
 
     # --- Command Cheat-Sheet (gesplittet auf 2 Folien)
     half = 7
@@ -722,7 +727,7 @@ def build_pptx():
     _bullet(tf, "Security:  " + X_SEC, size=12, color=P_WHITE)
     tf = _box(s, 0.8, 3.9, 11.7, 3.2)
     _bullet(tf, "TL;DR — wie der Erfinder:", size=16, color=P_CYAN, bold=True, first=True)
-    _bullet(tf, "1. In Phasen: Research → /plan (oder /rpi) → /feature-dev+TDD → /code-review → Verify.", size=13, color=P_WHITE)
+    _bullet(tf, "1. In Phasen: Research → /plan → /feature-dev+TDD → /code-review → Verify.", size=13, color=P_WHITE)
     _bullet(tf, "2. Kontext sauber: <10 MCPs, billigstes Modell, modulare Dateien, strategisch compacten.", size=13, color=P_WHITE)
     _bullet(tf, "3. Persistieren: /save-session · /resume-session.   4. Lernen: /learn-eval → /evolve → /promote.", size=13, color=P_WHITE)
     _bullet(tf, "5. Security zuerst: RTK aktiv, Hooks/AgentShield bewusst, nie blind ausführen.", size=13, color=P_WHITE)

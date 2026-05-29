@@ -57,14 +57,13 @@ fi
 echo "[VPS] Installiere ECC global (namespace-sicher: rules/ecc, skills/ecc, agents, commands)..."
 (cd "$ECC_DIR" && node scripts/install-apply.js --target claude --profile "$PROFILE")
 
-# 3) BestPractice-Extras layern (RPI-Workflow + Karpathy-Rule)
-echo "[VPS] Layere BestPractice-Extras (RPI + Karpathy)..."
-mkdir -p "$CLAUDE_HOME/commands/rpi" "$CLAUDE_HOME/agents/rpi" "$CLAUDE_HOME/rules/ecc-extras"
-cp "$EXTRAS_DIR/commands/rpi/"*.md      "$CLAUDE_HOME/commands/rpi/"
-cp "$EXTRAS_DIR/commands/adopt-project.md" "$CLAUDE_HOME/commands/"
-cp "$EXTRAS_DIR/agents/rpi/"*.md        "$CLAUDE_HOME/agents/rpi/"
-cp "$EXTRAS_DIR/rules/karpathy-principles.md" "$CLAUDE_HOME/rules/ecc-extras/"
-echo "[VPS] Extras gelayert: /rpi:research|plan|implement, /adopt-project, karpathy-principles."
+# 3) BestPractice-Extras layern (Karpathy-Rule + ECC-Onboard-Command)
+#    ECC ist führend; RPI/adopt-project entfernt (redundant zu ECC-Workflow + /ecc-onboard).
+echo "[VPS] Layere BestPractice-Extras (Karpathy + /ecc-onboard)..."
+mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras"
+cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
+cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
+echo "[VPS] Extras gelayert: /ecc-onboard, karpathy-principles."
 
 # 4) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
 if [ "$HARDEN" -eq 1 ]; then
