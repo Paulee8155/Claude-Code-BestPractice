@@ -10,8 +10,8 @@
 - **`docs/ECC-Harness-Guide.de.docx`** — ausführliches Nachschlagewerk (Word)
 - **`docs/ECC-Harness-Guide.de.pptx`** — Onboarding-Deck (PowerPoint)
 
-Beide erklären auf Deutsch: wann welcher Command, welches Modell, welcher MCP, der Phasen-Workflow,
-RPI, Memory, Security. Neu generierbar mit `python3 docs/build_guide.py`.
+Beide erklären auf Deutsch: wann welcher Command, welches Modell, welcher MCP, der 5-Phasen-Workflow,
+Codemaps, Memory & Persistenz, Security. Neu generierbar mit `python3 docs/build_guide.py`.
 
 ## 🚀 Installation / Re-Install (VPS-weit)
 
@@ -23,20 +23,19 @@ RPI, Memory, Security. Neu generierbar mit `python3 docs/build_guide.py`.
 ```
 
 Das Skript ist idempotent. Es installiert ECC namespace-sicher (`rules/ecc/`, `skills/ecc/`,
-`agents/`, `commands/`), layert die RPI-Commands + Karpathy-Rule und lässt **RTK-Hook und
+`agents/`, `commands/`), layert /ecc-onboard + die Karpathy-Rule und lässt **RTK-Hook und
 `settings.json` unangetastet**. ECC-Hooks bleiben **inaktiv** (Security-First).
 
 ## 🗂 Repo-Struktur
 
 ```
 .
-├── ecc/                   # Vendored ECC — die Engine (63 Agents, ~79 Skills, 79 Commands, Installer)
+├── ecc/                   # Vendored ECC — die Engine (63 Agents, 249 Skills, ~80 Commands, manifest-Installer)
 ├── bestpractice-extras/   # Kuratierte BestPractice-Stärken (kollisionsfrei, ECC-ergänzend)
-│   ├── commands/rpi/      #   /rpi:research · /rpi:plan · /rpi:implement
-│   ├── commands/          #   /adopt-project
-│   ├── agents/rpi/        #   8 RPI-Specialist-Agents
+│   ├── commands/          #   /ecc-onboard (One-Shot-Projekt-Setup)
 │   ├── rules/             #   karpathy-principles.md
-│   └── templates/         #   PROJECT_RULES, project-profile, tech-stack, state/-Vorlagen
+│   ├── templates/         #   PROJECT_RULES, project-profile, tech-stack, state/-Vorlagen
+│   └── _archive/          #   archiviert (inaktiv): RPI-Commands/-Agents, /adopt-project
 ├── install-vps.sh         # RTK-sicherer Rollout-Orchestrator (opt-in --harden)
 ├── docs/                  # Word- + PowerPoint-Guide + Generator (build_guide.py)
 └── legacy/                # Archiv des ursprünglichen BestPractice-Harness (NICHT installiert)
@@ -46,13 +45,17 @@ Das Skript ist idempotent. Es installiert ECC namespace-sicher (`rules/ecc/`, `s
 
 **Behalten** (einzigartig, ergänzt ECC):
 
-- **RPI-Workflow** — `/rpi:research → /rpi:plan → /rpi:implement` + `/adopt-project` (ECC hat kein `/rpi`)
+- **/ecc-onboard** — One-Shot-Projekt-Setup: Stack-Detection → Dry-Run → Install + PROJECT_RULES.md + state/
 - **`state/`-Pattern** + Templates (menschenlesbare Projekt-Persistenz)
 - **Karpathy-Principles** (always-on Disziplin-Rule)
 
+**Archiviert** (unter `bestpractice-extras/_archive/`, NICHT installiert — ECC deckt es ab):
+
+- RPI-Workflow (`/rpi:*`) + 8 RPI-Specialist-Agents, `/adopt-project` → ersetzt durch ECCs 5-Phasen-Workflow + /ecc-onboard
+
 **Verworfen** (ECC ist überlegen, siehe `legacy/README.md`):
 
-- 9 Domain-Agents → ECCs 63 Agents · 12 Skills → ECCs ~79 · Python-Hook-Monolith → ECC-Hooks + RTK
+- 9 Domain-Agents → ECCs 63 Agents · 12 Skills → ECCs 249 · Python-Hook-Monolith → ECC-Hooks + RTK
 - BP-MCPs (global bereits vorhanden) · BP-Rules (von `ecc/rules/ecc/*` abgedeckt)
 
 ## 🛡 Sicherheit & Koexistenz
