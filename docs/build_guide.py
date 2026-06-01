@@ -274,16 +274,23 @@ CMD_CHEAT = [
     ["Parallel / Loop", "/multi-plan  ·  /loop-start  ·  /loop-status", "mehrere Modelle / Automation"],
 ]
 
-MCP_ROWS = [
-    ["Aktuelle Library-/API-Doku", "context7", "React, Prisma, Next.js … statt veraltetem Wissen"],
+# Bei DIR tatsächlich aktiv (lokal/Plugins/claude.ai-Connectoren)
+MCP_ACTIVE = [
+    ["PDF/Word/Excel/PPTX lesen", "markitdown", "Dokumente → Markdown (lokal, global aktiv)"],
+    ["Aktuelle Library-/API-Doku", "context7", "React, Prisma, Next.js … statt veraltetem Wissen (Plugin)"],
+    ["Frühere Arbeit / „schon gelöst?“", "claude-mem", "deine Memory-Quelle: /mem-search, Auto-Injektion ab 2. Session"],
+    ["Kontext-Tooling", "context-mode", "lokaler MCP"],
+    ["Dienste anbinden", "claude.ai-Connectoren", "n8n · Notion · Gamma · Google Drive · Microsoft Learn · Kiwi"],
+    ["Bash-Token sparen", "RTK (Hook, kein MCP)", "60–90 % Ersparnis, läuft transparent global"],
+]
+
+# Empfohlen, aber NICHT installiert — bei Bedarf nachrüsten
+MCP_OPTIONAL = [
     ["Web-Recherche / Discovery", "exa", "breite Suche, wenn GitHub+Docs nicht reichen"],
-    ["GitHub (PRs, Issues, Code-Suche)", "github", "Code-Search FIRST vor Neuschreiben"],
+    ["GitHub (PRs, Issues, Code-Suche)", "github", "du nutzt die gh-CLI statt MCP"],
     ["Browser / E2E / Screenshots", "playwright", "headless Automation, visuelle Tests"],
-    ["PDF / Word / Excel lesen", "markitdown", "Dokumente → Markdown (global aktiv)"],
-    ["Strukturierter Wissensgraph", "memory", "Laufzeit-Memory (mit claude-mem abstimmen)"],
+    ["Strukturierter Wissensgraph", "memory", "Wissensgraph — NICHT nötig, claude-mem deckt das ab"],
     ["Schrittweises Reasoning", "sequential-thinking", "komplexe Mehrschritt-Probleme"],
-    ["Bash-Token sparen (lokal)", "RTK-Hook", "60–90 % Ersparnis, läuft transparent global"],
-    ["Frühere Arbeit / „schon gelöst?\"", "claude-mem (/mem-search)", "cross-session Memory, injiziert Kontext automatisch"],
 ]
 
 SECURITY_ACTIVE = [
@@ -539,7 +546,13 @@ def build_docx():
     add_heading(doc, "8 · Wann welcher MCP", 1)
     add_para(doc, "Faustregel: 20–30 MCPs konfiguriert, aber < 10 aktiv / < 80 Tools. Ungenutztes pro Projekt mit "
                   "/mcp deaktivieren — das Kontextfenster ist kostbar.")
-    add_table(doc, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_ROWS, widths=[2.4, 1.7, 2.7])
+    add_para(doc, "Bei dir aktiv (global):", bold=True, color=INDIGO, space=2)
+    add_table(doc, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_ACTIVE, widths=[2.4, 1.7, 2.7])
+    add_para(doc, "Optional / empfohlen — NICHT installiert, bei Bedarf nachrüsten:", bold=True, color=MUTED, space=2)
+    add_table(doc, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_OPTIONAL, widths=[2.4, 1.7, 2.7])
+    add_callout(doc, "Memory-Klarstellung:", "Der „memory“-MCP (Wissensgraph) ist NICHT installiert und nicht nötig — "
+                "claude-mem ist deine primäre Memory-Quelle (§10). EINE Quelle pro Projekt, sonst doppelte Wahrheit.",
+                color=INDIGO_D, fill=SURFACE)
 
     # 9
     add_heading(doc, "9 · Token-Ökonomie & Modellstrategie", 1)
@@ -556,6 +569,14 @@ def build_docx():
 
     # 10
     add_heading(doc, "10 · Memory & Sessions", 1)
+    add_para(doc, "claude-mem ist deine primäre, persistente Memory-Quelle — so nutzt du sie:",
+             bold=True, color=INDIGO, space=2)
+    add_bullets(doc, [
+        ("Automatisch:", "injiziert relevanten Kontext aus früheren Sessions ab der 2. Session je Projekt — ohne Zutun."),
+        ("/mem-search „…“:", "gezielt frühere Arbeit finden („schon gelöst?“, „wie haben wir X gemacht?“)."),
+        ("Erfasst von selbst:", "Beobachtungen/Entscheidungen werden automatisch gespeichert — kein manuelles Speichern."),
+    ])
+    add_para(doc, "Sessions explizit sichern/laden (ECC-Commands, ergänzend):", bold=True, color=INDIGO, space=2)
     add_table(doc, ["Command", "Zweck"], [
         ["/save-session", "Stand nach ~/.claude/session-data/ sichern"],
         ["/resume-session", "letzte Session laden & weitermachen"],
@@ -564,8 +585,8 @@ def build_docx():
         ["/aside", "Nebenfrage ohne Kontextverlust"],
     ], widths=[2.0, 4.6])
     add_para(doc, "Gute Session-Datei: Was funktioniert hat (mit Evidenz) · Was nicht ging · Was offen ist.", space=2)
-    add_callout(doc, "Koexistenz claude-mem:", "Entscheide dich pro Projekt für EINE primäre Memory-Quelle, "
-                "sonst doppelte Wahrheit. Keine Secrets in Memory.")
+    add_callout(doc, "EINE Memory-Quelle:", "claude-mem ist gesetzt — den generischen „memory“-MCP NICHT zusätzlich "
+                "aktivieren (sonst doppelte Wahrheit). Keine Secrets in Memory.")
 
     # 11
     add_heading(doc, "11 · Continuous Learning (Self-Improvement)", 1)
@@ -950,11 +971,18 @@ def build_pptx():
 
     # ===================================================== 10 · MCP
     s = _slide(prs, blank, "MCP", 10, "§8 Wann welcher MCP")
-    tf = _box(s, 0.7, 1.85, 12.0, 0.55)
-    _set(tf, "Faustregel: 20–30 konfiguriert, < 10 aktiv / < 80 Tools. Ungenutztes mit /mcp deaktivieren.",
+    tf = _box(s, 0.7, 1.8, 12.0, 0.45)
+    _set(tf, "Faustregel: < 10 MCPs aktiv / < 80 Tools. Ungenutztes mit /mcp deaktivieren.",
          size=14, color=P_AMBER, bold=True)
-    _dtable(s, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_ROWS, 0.6, 2.5, 12.2, 4.5,
-            col_w=[3.8, 2.8, 5.6], fsize=11)
+    tf = _box(s, 0.7, 2.3, 12.0, 0.38)
+    _set(tf, "● BEI DIR AKTIV", size=13, color=P_CYAN, bold=True)
+    _dtable(s, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_ACTIVE, 0.6, 2.72, 12.2, 3.35,
+            col_w=[3.4, 2.9, 5.9], fsize=11)
+    tf = _box(s, 0.7, 6.2, 12.0, 1.05)
+    _bullet(tf, "Optional, NICHT installiert: exa · github (du: gh-CLI) · playwright · sequential-thinking.",
+            size=13, color=P_MUTED, first=True)
+    _bullet(tf, "„memory“-MCP (Wissensgraph) nicht nötig — claude-mem ist deine Memory-Quelle.",
+            size=13, color=P_AMBER, bold=True)
 
     # ===================================================== 11 · Modellstrategie (Karten)
     s = _slide(prs, blank, "Modelle", 11, "§9 Token-Ökonomie & Modellstrategie")
@@ -989,10 +1017,12 @@ def build_pptx():
         ["/learn-eval → /evolve → /promote", "Self-Improvement-Loop (Instincts)"],
         ["/instinct-status · /skill-create", "Instincts zeigen · Skill aus Git-History"],
     ], 0.7, 1.95, 12.0, 3.0, col_w=[5.4, 6.6], fsize=13)
-    tf = _box(s, 0.7, 5.3, 12.0, 1.4)
-    _bullet(tf, "EINE primäre Memory-Quelle je Projekt (claude-mem-Koexistenz). Keine Secrets in Memory.",
-            size=15, color=P_AMBER, bold=True, first=True)
-    _bullet(tf, "Routine: Session-Ende → /learn-eval → /evolve → /promote.", size=14, color=P_INDIGO)
+    tf = _box(s, 0.7, 5.2, 12.0, 1.7)
+    _bullet(tf, "claude-mem = deine Memory-Quelle: Auto-Injektion ab 2. Session · /mem-search für frühere Arbeit.",
+            size=14, color=P_TEXT, bold=True, first=True)
+    _bullet(tf, "EINE primäre Memory-Quelle je Projekt — kein zusätzlicher memory-MCP. Keine Secrets in Memory.",
+            size=14, color=P_AMBER, bold=True)
+    _bullet(tf, "Routine: Session-Ende → /learn-eval → /evolve → /promote.", size=13, color=P_INDIGO)
 
     # ===================================================== 13 · Parallelisierung (NEU)
     s = _slide(prs, blank, "Parallel", 13, "§12 Parallelisierung")
