@@ -437,7 +437,7 @@ def build_docx():
     add_table(doc, ["Dein Tool", "ECC-Pendant", "Empfehlung"], [
         ["superpowers", "tdd-workflow, verification-loop …", "Beides nutzbar; bei Doppelung ECC bevorzugen"],
         ["claude-mem", "/save-session, continuous-learning-v2", "primäre Memory-Quelle; injiziert Kontext automatisch"],
-        ["RTK", "Token-Ökonomie (§9)", "Ergänzen sich: RTK auf Bash-, ECC auf Workflow-Ebene"],
+        ["RTK", "Token-Ökonomie (§10)", "Ergänzen sich: RTK auf Bash-, ECC auf Workflow-Ebene"],
         ["codex / superpowers", "diverse Skills/Agents", "eigenständiger Mehrwert; bleiben aktiv"],
     ], widths=[1.4, 2.4, 3.0])
     add_callout(doc, "Aufgeräumt:", "feature-dev existierte 3-fach — die ECC-Version ist kanonisch, das gleichnamige "
@@ -535,15 +535,82 @@ def build_docx():
                 "review.md, dazwischen /clear. Codemaps + PROJECT_RULES.md + state/ sind die dauerhafte Landkarte; "
                 "der Chat-Kontext bleibt schlank.", color=INDIGO_D, fill=SURFACE)
 
-    # 7
-    add_heading(doc, "7 · Cheat-Sheet — wann welcher Command", 1)
+    # 7 (NEU · Playbook)
+    add_heading(doc, "7 · Playbook — Von 0 auf Feature (durchgespielt)", 1)
+    add_para(doc, "Kapitel 5–6 erklären die Phasen und das Onboarding einzeln. Hier laufen sie als EIN "
+                  "durchgehender Ablauf zusammen — genau wie der Erfinder: zwei Startpunkte, ein Feature von "
+                  "Anfang bis grün, dann der tägliche Rhythmus.", space=2)
+
+    add_para(doc, "a) Zwei Startpunkte — leeres Projekt ODER bestehende Codebase", bold=True, color=INDIGO, space=2)
+    add_para(doc, "Leeres Projekt (greenfield) — bei null anfangen:", bold=True, space=2)
+    add_code(doc,
+             "mkdir mein-projekt && cd mein-projekt && git init\n"
+             "claude                       # Claude Code IN diesem Ordner starten\n"
+             "/ecc-onboard                 # Stack-Frage → 1x OK → .claude/rules+skills, PROJECT_RULES.md, state/\n"
+             "/plan  Baue <Feature X> …    # erster Plan — wartet auf dein OK")
+    add_para(doc, "Bestehende Codebase übernehmen — fremden Code zähmen:", bold=True, space=2)
+    add_code(doc,
+             "git clone <repo> && cd <repo>\n"
+             "claude\n"
+             "/ecc-onboard                 # erkennt Stack aus package.json / go.mod / pyproject.toml …\n"
+             "/update-codemaps             # EINMAL kartieren → docs/CODEMAPS/*  (danach Karte statt Volltext)\n"
+             "code-tour · smart-explore    # geführte Tour / Struktur-Suche bei fremdem Code")
+    add_callout(doc, "Einmal, nicht jedes Mal:", "/ecc-onboard und /update-codemaps laufen pro Projekt EINMAL. "
+                "Das Ergebnis ist persistent (Dateien) — jede Folge-Session startet mit der kompakten Karte statt "
+                "die ganze Codebase neu zu durchsuchen.", color=INDIGO_D, fill=SURFACE)
+
+    add_para(doc, "b) Ein Feature von Anfang bis Ende — Beispiel: neuer /api/search-Endpoint",
+             bold=True, color=INDIGO, space=2)
+    add_para(doc, "Eine Aufgabe, fünf Phasen, je ein Datei-Output, /clear dazwischen, billigstes ausreichendes Modell:",
+             space=2)
+    add_table(doc, ["Phase", "Du tippst", "Modell", "Output (Datei)"], [
+        ["1 · RESEARCH", "Explore-Agent: Routing/Handler/Tests für Suche kartieren (+ claude-mem)", "Haiku", "research.md"],
+        ["— /clear —", "Explorations-Kontext ist für die Umsetzung irrelevant", "—", "—"],
+        ["2 · PLAN", "/plan  /api/search: Query → Filter → Paginierung, Tests zuerst", "Opus", "plan.md (wartet auf OK)"],
+        ["3 · IMPLEMENT", "/feature-dev  plan.md umsetzen (Skill tdd-workflow: Tests zuerst)", "Sonnet→Opus", "Code + Tests (RED→GREEN)"],
+        ["4 · REVIEW", "/code-review  (+ /python-review | /go-review …)", "Opus", "review.md"],
+        ["5 · VERIFY", "Tests/Build grün? sonst /build-fix → zurück zu Phase 3", "Sonnet", "grün → commit / PR"],
+    ], widths=[1.15, 3.15, 0.95, 1.55])
+    add_para(doc, "Konkret getippt (copy-paste-tauglich):", bold=True, space=2)
+    add_code(doc,
+             "# Phase 1 — Research (Output in Datei, nicht im Kopf)\n"
+             "Explore-Agent: kartiere vorhandenes Routing/Handler/Tests für Suche → research.md\n"
+             "/clear\n"
+             "# Phase 2 — Plan (wartet auf dein OK)\n"
+             "/plan  Neuer Endpoint /api/search: Volltext-Query, Filter, Paginierung; Tests zuerst. Quelle: research.md\n"
+             "/clear\n"
+             "# Phase 3 — Implement (TDD: erst RED, dann GREEN)\n"
+             "/feature-dev  Setze plan.md um — Tests zuerst\n"
+             "# Phase 4 — Review\n"
+             "/code-review                 # + /python-review bzw. /<sprache>-review fuer die geaenderten Dateien\n"
+             "# Phase 5 — Verify\n"
+             "/build-fix                   # nur falls Build/Tests rot — sonst committen\n"
+             "/save-session                # Stand sichern (fuer morgen)")
+    add_callout(doc, "Die eine Regel:", "„In Dateien speichern, nicht im Kopf behalten.“ research.md → plan.md → "
+                "review.md. Jede Phase: ein Input, ein Output. Phasen nicht überspringen, /clear dazwischen.",
+                color=INDIGO_D, fill=SURFACE)
+
+    add_para(doc, "c) Der tägliche Rhythmus", bold=True, color=INDIGO, space=2)
+    add_table(doc, ["Wann", "Was du tust", "Warum"], [
+        ["Session-Start", "claude-mem injiziert Kontext automatisch (ab 2. Session) · rtk gain", "nahtlos weiter, wo du warst"],
+        ["Vor großer Aufgabe", "/resume-session · /mem-search „schon gelöst?“", "Alt-Wissen nutzen statt neu lösen"],
+        ["Während", "in Phasen arbeiten · /clear zwischen Phasen · /checkpoint", "Kontext schlank, billiges Modell"],
+        ["Nebenfrage", "/aside  (oder /fork)", "Haupt-Task-Kontext nicht verlieren"],
+        ["Session-Ende", "/learn-eval → /evolve → /promote · /save-session", "ECC lernt — morgen schneller"],
+    ], widths=[1.5, 3.4, 1.9])
+    add_callout(doc, "Der Loop, der ECC ausmacht:", "Was du zum 3. Mal tippst → /skill-create. Bewährte Muster → "
+                "/promote (global). So wirst du mit jeder Session schneller — genau das trennt ECC von „nur Configs“.",
+                color=INDIGO_D, fill=SURFACE)
+
+    # 8
+    add_heading(doc, "8 · Cheat-Sheet — wann welcher Command", 1)
     add_table(doc, ["Situation", "Command", "Zweck"], CMD_CHEAT, widths=[1.9, 2.5, 2.4])
     add_para(doc, "Sprach-spezifisch: /go-build|review|test, /rust-*, /cpp-*, /kotlin-*, /react-*, /flutter-*, "
                   "/python-review, /fastapi-review.  PRP-Pipeline: /prp-prd → /prp-plan → /prp-implement → "
                   "/prp-commit → /prp-pr.", color=MUTED, size=9.5)
 
-    # 8
-    add_heading(doc, "8 · Wann welcher MCP", 1)
+    # 9
+    add_heading(doc, "9 · Wann welcher MCP", 1)
     add_para(doc, "Faustregel: 20–30 MCPs konfiguriert, aber < 10 aktiv / < 80 Tools. Ungenutztes pro Projekt mit "
                   "/mcp deaktivieren — das Kontextfenster ist kostbar.")
     add_para(doc, "Bei dir aktiv (global):", bold=True, color=INDIGO, space=2)
@@ -551,11 +618,11 @@ def build_docx():
     add_para(doc, "Optional / empfohlen — NICHT installiert, bei Bedarf nachrüsten:", bold=True, color=MUTED, space=2)
     add_table(doc, ["Aufgabe", "MCP / Tool", "Hinweis"], MCP_OPTIONAL, widths=[2.4, 1.7, 2.7])
     add_callout(doc, "Memory-Klarstellung:", "Der „memory“-MCP (Wissensgraph) ist NICHT installiert und nicht nötig — "
-                "claude-mem ist deine primäre Memory-Quelle (§10). EINE Quelle pro Projekt, sonst doppelte Wahrheit.",
+                "claude-mem ist deine primäre Memory-Quelle (§11). EINE Quelle pro Projekt, sonst doppelte Wahrheit.",
                 color=INDIGO_D, fill=SURFACE)
 
-    # 9
-    add_heading(doc, "9 · Token-Ökonomie & Modellstrategie", 1)
+    # 10
+    add_heading(doc, "10 · Token-Ökonomie & Modellstrategie", 1)
     add_para(doc, "Billigstes ausreichendes Modell pro Aufgabe — das ist die Subagent-Architektur:")
     add_table(doc, ["Aufgabe", "Modell", "Warum"], MODEL_ROWS, widths=[2.4, 1.6, 2.8])
     add_callout(doc, "Default = Opus 4.8 (1M)", "— schnell genug via /fast. Effort-Level: medium Standard, high bei "
@@ -567,8 +634,8 @@ def build_docx():
         "/refactor-clean nach langen Sessions.",
     ])
 
-    # 10
-    add_heading(doc, "10 · Memory & Sessions", 1)
+    # 11
+    add_heading(doc, "11 · Memory & Sessions", 1)
     add_para(doc, "claude-mem ist deine primäre, persistente Memory-Quelle — so nutzt du sie:",
              bold=True, color=INDIGO, space=2)
     add_bullets(doc, [
@@ -588,8 +655,8 @@ def build_docx():
     add_callout(doc, "EINE Memory-Quelle:", "claude-mem ist gesetzt — den generischen „memory“-MCP NICHT zusätzlich "
                 "aktivieren (sonst doppelte Wahrheit). Keine Secrets in Memory.")
 
-    # 11
-    add_heading(doc, "11 · Continuous Learning (Self-Improvement)", 1)
+    # 12
+    add_heading(doc, "12 · Continuous Learning (Self-Improvement)", 1)
     add_para(doc, "Das unterscheidet ECC von „nur Configs\": es lernt aus deinen Sessions.")
     add_table(doc, ["Command", "Zweck"], [
         ["/learn", "Muster aus der Session extrahieren"],
@@ -602,8 +669,8 @@ def build_docx():
     add_para(doc, "Routine: Session-Ende → /learn-eval → bei guten Mustern /evolve → Bewährtes mit /promote global "
                   "verfügbar machen.", space=2)
 
-    # 12
-    add_heading(doc, "12 · Parallelisierung", 1)
+    # 13
+    add_heading(doc, "13 · Parallelisierung", 1)
     add_bullets(doc, [
         ("/fork", "Konversation forken für nicht-überlappende Nebenaufgaben (Fragen zur Codebase)."),
         ("Git-Worktrees", "für überlappende parallele Arbeit ohne Konflikte — eigene Claude-Instanz je Worktree."),
@@ -612,8 +679,8 @@ def build_docx():
     ])
     add_code(doc, "git worktree add ../feature-a feature-a\ncd ../feature-a && claude   # eigene Instanz")
 
-    # 13
-    add_heading(doc, "13 · Security im Alltag + VPS-Hinweise", 1)
+    # 14
+    add_heading(doc, "14 · Security im Alltag + VPS-Hinweise", 1)
     add_para(doc, "Kernhaltung: Baue so, als würde das Modell irgendwann etwas Feindliches lesen, während es etwas "
                   "Wertvolles hält (lethal trifecta: private Daten + untrusted Content + externe Kommunikation).")
     add_para(doc, "Bereits aktiv / sicher:", bold=True, color=EMERALD, space=2)
@@ -624,8 +691,8 @@ def build_docx():
                 "bleiben deshalb inaktiv, bis du sie pro Bedarf sichtest und aktivierst. Härtung gezielt via "
                 "./install-vps.sh --harden (legt vorher ein settings.json-Backup an).")
 
-    # 14
-    add_heading(doc, "14 · ECC-CLIs & Wartung", 1)
+    # 15
+    add_heading(doc, "15 · ECC-CLIs & Wartung", 1)
     add_code(doc,
              "cd \"/root/projekte/Claude Code BestPractice/ecc\"\n"
              "node scripts/ecc.js doctor          # Health-Check (claude-home: OK)\n"
@@ -637,8 +704,8 @@ def build_docx():
     add_para(doc, "Slash-Einstieg: /ecc-guide (Onboarding), /harness-audit (Config-Scorecard), /cost-report, "
                   "/skill-health, /projects.", color=MUTED, size=9.5)
 
-    # 15
-    add_heading(doc, "15 · Quellen & TL;DR", 1)
+    # 16
+    add_heading(doc, "16 · Quellen & TL;DR", 1)
     add_para(doc, "Original-Guides von @affaanmustafa (als X-Threads veröffentlicht; lokal im Repo unter ecc/):",
              bold=True, space=2)
     add_bullets(doc, [
@@ -725,13 +792,13 @@ def _bullet(tf, text, size=15, color=P_TEXT, bold=False, level=0, first=False, f
 
 
 def _chrome(slide, kicker, n):
-    """Cyan-Punkt + Kicker oben links, Foliennummer oben rechts (n / 16)."""
+    """Cyan-Punkt + Kicker oben links, Foliennummer oben rechts (n / 18)."""
     dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, PInches(0.6), PInches(0.42), PInches(0.16), PInches(0.16))
     dot.fill.solid(); dot.fill.fore_color.rgb = P_CYAN; dot.line.fill.background(); dot.shadow.inherit = False
     tf = _box(slide, 0.85, 0.33, 8.0, 0.5)
     _set(tf, kicker.upper(), size=12, color=P_CYAN, bold=True)
     tf2 = _box(slide, 10.5, 0.33, 2.2, 0.5)
-    _set(tf2, f"{n} / 16", size=12, color=P_MUTED, align=PP_ALIGN.RIGHT)
+    _set(tf2, f"{n} / 18", size=12, color=P_MUTED, align=PP_ALIGN.RIGHT)
 
 
 def _h(slide, title):
@@ -959,18 +1026,62 @@ def build_pptx():
     _bullet(tf, "Pro Aufgabe: research.md (Explore-Agent) → /plan. claude-mem injiziert Alt-Kontext automatisch.",
             size=13, color=P_MUTED)
 
-    # ===================================================== 8 · Cheat-Sheet 1/2
-    s = _slide(prs, blank, "Cheat-Sheet", 8, "§7 Cheat-Sheet — Command (1/2)")
+    # ===================================================== 8 · §7a Zwei Startpunkte (NEU)
+    s = _slide(prs, blank, "Start", 8, "§7a Zwei Startpunkte — leer oder Codebase")
+    _round(s, 0.7, 1.95, 5.85, 3.5, P_CODE)
+    tf = _box(s, 0.95, 2.18, 5.4, 3.2)
+    _bullet(tf, "LEERES PROJEKT (greenfield)", size=14, color=P_CYAN, bold=True, first=True)
+    _bullet(tf, "", size=6)
+    for line in [
+            "mkdir app && cd app && git init",
+            "claude",
+            "/ecc-onboard      # Stack → 1x OK",
+            "/plan  Baue <Feature> …"]:
+        _bullet(tf, line, size=12.5, color=PRGB(0x9C, 0xE3, 0xF0), font="Consolas")
+    _round(s, 6.85, 1.95, 5.8, 3.5, P_CODE)
+    tf = _box(s, 7.1, 2.18, 5.35, 3.2)
+    _bullet(tf, "BESTEHENDE CODEBASE", size=14, color=P_CYAN, bold=True, first=True)
+    _bullet(tf, "", size=6)
+    for line in [
+            "git clone <repo> && cd <repo>",
+            "claude",
+            "/ecc-onboard      # Stack erkannt",
+            "/update-codemaps  # EINMAL kartieren",
+            "code-tour · smart-explore"]:
+        _bullet(tf, line, size=12.5, color=PRGB(0x9C, 0xE3, 0xF0), font="Consolas")
+    tf = _box(s, 0.7, 5.7, 12.0, 1.3)
+    _bullet(tf, "Einmal, nicht jedes Mal: /ecc-onboard + /update-codemaps laufen pro Projekt EINMAL.",
+            size=15, color=P_AMBER, bold=True, first=True)
+    _bullet(tf, "Ergebnis ist persistent (Dateien) — jede Folge-Session startet mit der kompakten Karte.",
+            size=13, color=P_MUTED)
+
+    # ===================================================== 9 · §7b Feature durchgespielt (NEU)
+    s = _slide(prs, blank, "Durchgespielt", 9, "§7b Ein Feature von 0 auf grün — /api/search")
+    _dtable(s, ["Phase", "Du tippst", "→ Output · Modell"], [
+        ["1 RESEARCH", "Explore-Agent: Routing/Handler/Tests kartieren (+ claude-mem)", "research.md · Haiku"],
+        ["2 PLAN", "/plan  /api/search: Query → Filter → Paginierung, Tests zuerst", "plan.md (wartet) · Opus"],
+        ["3 IMPLEMENT", "/feature-dev  plan.md umsetzen (tdd-workflow: Tests zuerst)", "Code+Tests RED→GREEN · Sonnet"],
+        ["4 REVIEW", "/code-review  (+ /python-review …)", "review.md · Opus"],
+        ["5 VERIFY", "Tests/Build grün? sonst /build-fix → zurück zu Phase 3", "grün → commit · Sonnet"],
+    ], 0.6, 1.95, 12.2, 3.6, col_w=[2.0, 6.1, 4.1], fsize=11.5)
+    tf = _box(s, 0.7, 5.75, 12.0, 1.3)
+    _bullet(tf, "/clear zwischen den Phasen. Jede Phase: ein Input, ein Output (Datei). Phasen nicht überspringen.",
+            size=14, color=P_AMBER, bold=True, first=True)
+    _bullet(tf, "Regel: „In Dateien speichern, nicht im Kopf behalten.“  research.md → plan.md → review.md.",
+            size=13, color=P_MUTED)
+
+    # ===================================================== 10 · Cheat-Sheet 1/2
+    s = _slide(prs, blank, "Cheat-Sheet", 10, "§8 Cheat-Sheet — Command (1/2)")
     _dtable(s, ["Situation", "Command", "Zweck"], CMD_CHEAT[:8], 0.6, 1.9, 12.2, 5.0,
             col_w=[3.0, 4.4, 4.8], fsize=11.5)
 
     # ===================================================== 9 · Cheat-Sheet 2/2
-    s = _slide(prs, blank, "Cheat-Sheet", 9, "§7 Cheat-Sheet — Command (2/2)")
+    s = _slide(prs, blank, "Cheat-Sheet", 11, "§8 Cheat-Sheet — Command (2/2)")
     _dtable(s, ["Situation", "Command", "Zweck"], CMD_CHEAT[8:], 0.6, 1.9, 12.2, 5.0,
             col_w=[3.0, 4.4, 4.8], fsize=11.5)
 
     # ===================================================== 10 · MCP
-    s = _slide(prs, blank, "MCP", 10, "§8 Wann welcher MCP")
+    s = _slide(prs, blank, "MCP", 12, "§9 Wann welcher MCP")
     tf = _box(s, 0.7, 1.8, 12.0, 0.45)
     _set(tf, "Faustregel: < 10 MCPs aktiv / < 80 Tools. Ungenutztes mit /mcp deaktivieren.",
          size=14, color=P_AMBER, bold=True)
@@ -985,7 +1096,7 @@ def build_pptx():
             size=13, color=P_AMBER, bold=True)
 
     # ===================================================== 11 · Modellstrategie (Karten)
-    s = _slide(prs, blank, "Modelle", 11, "§9 Token-Ökonomie & Modellstrategie")
+    s = _slide(prs, blank, "Modelle", 13, "§10 Token-Ökonomie & Modellstrategie")
     mcards = [
         ("HAIKU 4.5", P_CYAN, "Worker-Agents", [
             "Exploration / Suche", "viele günstige Parallel-Agents", "Doku-Struktur"]),
@@ -1010,7 +1121,7 @@ def build_pptx():
          size=13, color=P_MUTED)
 
     # ===================================================== 12 · Memory + Learning
-    s = _slide(prs, blank, "Memory & Lernen", 12, "§10–11 Memory, Sessions & Continuous Learning")
+    s = _slide(prs, blank, "Memory & Lernen", 14, "§11–12 Memory, Sessions & Continuous Learning")
     _dtable(s, ["Command", "Zweck"], [
         ["/save-session · /resume-session", "Tag-zu-Tag-Fortschritt persistieren"],
         ["/sessions · /checkpoint · /aside", "Historie · Checkpoint · Nebenfrage"],
@@ -1025,7 +1136,7 @@ def build_pptx():
     _bullet(tf, "Routine: Session-Ende → /learn-eval → /evolve → /promote.", size=13, color=P_INDIGO)
 
     # ===================================================== 13 · Parallelisierung (NEU)
-    s = _slide(prs, blank, "Parallel", 13, "§12 Parallelisierung")
+    s = _slide(prs, blank, "Parallel", 15, "§13 Parallelisierung")
     pcards = [
         ("/fork", "Konversation forken für nicht-überlappende Nebenaufgaben (Codebase-Fragen)."),
         ("Git-Worktrees", "überlappende parallele Arbeit ohne Konflikte — eigene Claude-Instanz je Worktree."),
@@ -1045,7 +1156,7 @@ def build_pptx():
             size=14, color=PRGB(0x9C, 0xE3, 0xF0), bold=True, first=True, font="Consolas")
 
     # ===================================================== 14 · Security
-    s = _slide(prs, blank, "Security", 14, "§13 Security im Alltag + VPS")
+    s = _slide(prs, blank, "Security", 16, "§14 Security im Alltag + VPS")
     _round(s, 0.7, 1.95, 5.85, 3.7, P_CARD, line=P_EMERALD)
     tf = _box(s, 0.95, 2.15, 5.4, 3.4)
     _bullet(tf, "Aktiv / sicher", size=16, color=P_EMERALD, bold=True, first=True)
@@ -1065,7 +1176,7 @@ def build_pptx():
              "Härtung: ./install-vps.sh --harden (mit settings.json-Backup).", size=13, color=P_MUTED)
 
     # ===================================================== 15 · ECC-CLIs & Wartung (NEU)
-    s = _slide(prs, blank, "CLIs & Wartung", 15, "§14 ECC-CLIs & Wartung")
+    s = _slide(prs, blank, "CLIs & Wartung", 17, "§15 ECC-CLIs & Wartung")
     _round(s, 0.7, 1.95, 11.95, 3.2, P_CODE)
     tf = _box(s, 1.0, 2.2, 11.4, 2.8)
     code_lines = [
@@ -1082,7 +1193,7 @@ def build_pptx():
          size=15, color=P_INDIGO, bold=True)
 
     # ===================================================== 16 · Quellen & TL;DR
-    s = _slide(prs, blank, "Quellen", 16, "Quellen & TL;DR")
+    s = _slide(prs, blank, "Quellen", 18, "Quellen & TL;DR")
     tf = _box(s, 0.7, 1.9, 12.0, 1.7)
     _bullet(tf, "Guides von @affaanmustafa (X-Threads; lokal unter ecc/):", size=14, color=P_CYAN, bold=True, first=True)
     _bullet(tf, "Shortform: " + X_SHORT, size=11.5, color=P_TEXT)
