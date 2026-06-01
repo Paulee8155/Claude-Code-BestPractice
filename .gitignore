@@ -26,3 +26,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# ECCs eigener .claude-Dev-Teilbaum — gehoert nicht zur vendored Engine, nur Upstream-Ballast
+ecc/.claude/
