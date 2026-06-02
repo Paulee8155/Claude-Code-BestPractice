@@ -1,3 +1,5 @@
 # decisions
 
-> Projekt-State (von /adopt-project gefüllt). Teil des BestPractice state/-Patterns.
+<!-- Architektur-/Design-Entscheidungen (ADR-leicht). Vom Menschen gepflegt.
+     Fliesst (read-only) in WORKING-CONTEXT.md -> "## Decisions".
+     Format:  - [JJJJ-MM-TT] Entscheidung — kurze Begruendung -->

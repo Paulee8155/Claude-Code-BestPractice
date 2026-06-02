@@ -29,3 +29,6 @@ __pycache__/
 
 # ECCs eigener .claude-Dev-Teilbaum — gehoert nicht zur vendored Engine, nur Upstream-Ballast
 ecc/.claude/
+
+# State-Sync-Snapshot-Cache (Hybrid-Harness) — nur lokaler Delta-Vergleich, kein VCS
+state/.sync/

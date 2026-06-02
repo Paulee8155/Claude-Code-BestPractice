@@ -1,3 +1,4 @@
 # progress
 
-> Projekt-State (von /adopt-project gefüllt). Teil des BestPractice state/-Patterns.
+<!-- Verlauf erledigter Arbeit (append-only). Der Loop schreibt Erfolge via POST
+     zurueck. PRE spiegelt nach "## Progress So Far". -->
