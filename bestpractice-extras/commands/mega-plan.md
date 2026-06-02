@@ -24,7 +24,8 @@ unberührt.
 
 ## Berater-Namespace
 
-Read-only Berater-Personas in `bestpractice-extras/agents/`:
+Read-only Berater-Personas. **Persona-Basis (absoluter Pfad, funktioniert aus jedem Repo):**
+`/root/projekte/Claude Code BestPractice/bestpractice-extras/agents/`
 
 | Advisor | Datei | Perspektive |
 |---|---|---|
@@ -41,8 +42,10 @@ Default: **Intake + CTO immer**; **PM** bei Produkt/Feature-Bezug; **UX** bei UI
 
 ### 2. Parallel dispatchen (eine Antwort, mehrere Agent-Calls)
 Für jeden gewählten Advisor **einen `general-purpose`-Subagent** starten. Prompt-Aufbau:
-- den **vollständigen Persona-Text** der jeweiligen Datei aus `bestpractice-extras/agents/`
-  (per `Read` laden und einfügen),
+- den **vollständigen Persona-Text** der jeweiligen Datei aus der Persona-Basis
+  `/root/projekte/Claude Code BestPractice/bestpractice-extras/agents/<datei>.md`
+  (per `Read` mit ABSOLUTEM Pfad laden und einfügen — nie repo-relativ, da /mega-plan
+  global aus beliebigen Repos läuft),
 - gefolgt vom Ziel + relevantem Repo-Kontext (kurz).
 Die Berater sind read-only und liefern je einen Markdown-Brief zurück (kein Code).
 

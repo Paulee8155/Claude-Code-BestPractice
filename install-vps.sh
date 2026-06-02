@@ -59,11 +59,12 @@ echo "[VPS] Installiere ECC global (namespace-sicher: rules/ecc, skills/ecc, age
 
 # 3) BestPractice-Extras layern (Karpathy-Rule + ECC-Onboard-Command)
 #    ECC ist führend; RPI/adopt-project entfernt (redundant zu ECC-Workflow + /ecc-onboard).
-echo "[VPS] Layere BestPractice-Extras (Karpathy + /ecc-onboard)..."
+echo "[VPS] Layere BestPractice-Extras (Karpathy + /ecc-onboard + /mega-plan)..."
 mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras"
 cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
+cp "$EXTRAS_DIR/commands/mega-plan.md"         "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
-echo "[VPS] Extras gelayert: /ecc-onboard, karpathy-principles."
+echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, karpathy-principles."
 
 # 4) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
 if [ "$HARDEN" -eq 1 ]; then
