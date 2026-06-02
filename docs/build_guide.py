@@ -705,7 +705,49 @@ def build_docx():
                   "/skill-health, /projects.", color=MUTED, size=9.5)
 
     # 16
-    add_heading(doc, "16 · Quellen & TL;DR", 1)
+    add_heading(doc, "16 · Hybrid-Mega-Workflow — State-Sync + RPI-Berater", 1)
+    add_para(doc, "Der BestPractice-Wrapper koppelt persistenten Projekt-State an ECCs Loop und stellt "
+                  "/mega-plan als Planungs-Vorstufe bereit — rein additiv. Der ECC-Core (ecc/) bleibt unverändert.",
+             space=2)
+    add_para(doc, "a) Wo wird was gespeichert", bold=True, color=INDIGO, space=2)
+    add_table(doc, ["Artefakt", "Ort", "Wahrheit?"], [
+        ["State (4 Dateien)", "state/{context,decisions,tasks,progress}.md", "JA — vom Menschen"],
+        ["Loop-Futter", "<root>/WORKING-CONTEXT.md (generiert)", "Nein — aus state/"],
+        ["Sync-Snapshot", "state/.sync/last-working-context.md", "Nein — gitignored"],
+        ["Karpathy (global)", "~/.claude/rules/ecc-extras/ + @-Import", "JA — einmalig"],
+    ], widths=[1.7, 3.4, 1.7])
+    add_callout(doc, "Merksatz:", "state/ ist die Wahrheit. WORKING-CONTEXT.md ist nur ihr generiertes "
+                "Spiegelbild für den Loop — nie von Hand pflegen, immer state/ editieren.",
+                color=INDIGO_D, fill=SURFACE)
+
+    add_para(doc, "b) Der Sync-Loop (PRE/POST, via Lifecycle-Hooks)", bold=True, color=INDIGO, space=2)
+    add_code(doc,
+             "state/*.md  --PRE (SessionStart)-->  WORKING-CONTEXT.md   (Loop liest STATE:*, fuellt SYNC:*)\n"
+             "WORKING-CONTEXT.md  --POST (Stop/PreCompact)-->  state/progress.md + tasks.md   (nur Delta)")
+    add_bullets(doc, [
+        ("PRE:", "generiert WORKING-CONTEXT.md aus state/; STATE:*-Blöcke gespiegelt, SYNC:*-Eingabezonen bleiben erhalten."),
+        ("POST:", "liest nur die SYNC:*-Zonen, bildet das Delta gegen den Snapshot, hängt neue Zeilen verlustfrei an state/ an."),
+        ("Garantien:", "Marker (kein Clobbering) · atomar · idempotent · No-op- & ECC-Guard · Exit 0. Test: selftest.js (7 Checks)."),
+    ])
+
+    add_para(doc, "c) /mega-plan — RPI-Berater parallel vor /plan", bold=True, color=INDIGO, space=2)
+    add_para(doc, "Für vage/vielschichtige Ziele: holt mehrere read-only Experten-Perspektiven parallel ein, "
+                  "verdichtet sie zu einem Briefing und übergibt an ECCs /plan (führend).", space=2)
+    add_table(doc, ["Berater", "Perspektive"], [
+        ["Intake (requirement-parser)", "Anforderungen, Constraints, offene Fragen"],
+        ["CTO", "Technik-Strategie, Architektur-Fit, Risiko"],
+        ["Product", "Scope, Requirements, Akzeptanzkriterien"],
+        ["UX", "Flows, States, Accessibility"],
+    ], widths=[2.6, 4.6])
+    add_code(doc,
+             "/mega-plan  <Ziel in einem Satz>      # Berater parallel -> Briefing -> /plan\n"
+             "/plan                                  # ECC, wartet auf dein OK\n"
+             "/feature-dev -> /code-review -> Verify # normaler ECC-5-Phasen-Flow")
+    add_callout(doc, "ECC-Core unberührt:", "Alles liegt in bestpractice-extras/. git diff zeigt keine Änderung "
+                "unter ecc/. Tiefe Doku: docs/MEGA-WORKFLOW.de.md.", color=INDIGO_D, fill=SURFACE)
+
+    # 17
+    add_heading(doc, "17 · Quellen & TL;DR", 1)
     add_para(doc, "Original-Guides von @affaanmustafa (als X-Threads veröffentlicht; lokal im Repo unter ecc/):",
              bold=True, space=2)
     add_bullets(doc, [
@@ -792,13 +834,13 @@ def _bullet(tf, text, size=15, color=P_TEXT, bold=False, level=0, first=False, f
 
 
 def _chrome(slide, kicker, n):
-    """Cyan-Punkt + Kicker oben links, Foliennummer oben rechts (n / 18)."""
+    """Cyan-Punkt + Kicker oben links, Foliennummer oben rechts (n / 19)."""
     dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, PInches(0.6), PInches(0.42), PInches(0.16), PInches(0.16))
     dot.fill.solid(); dot.fill.fore_color.rgb = P_CYAN; dot.line.fill.background(); dot.shadow.inherit = False
     tf = _box(slide, 0.85, 0.33, 8.0, 0.5)
     _set(tf, kicker.upper(), size=12, color=P_CYAN, bold=True)
     tf2 = _box(slide, 10.5, 0.33, 2.2, 0.5)
-    _set(tf2, f"{n} / 18", size=12, color=P_MUTED, align=PP_ALIGN.RIGHT)
+    _set(tf2, f"{n} / 19", size=12, color=P_MUTED, align=PP_ALIGN.RIGHT)
 
 
 def _h(slide, title):
@@ -1192,8 +1234,31 @@ def build_pptx():
     _set(tf, "Slash-Einstieg:  /ecc-guide · /harness-audit · /cost-report · /skill-health · /projects.",
          size=15, color=P_INDIGO, bold=True)
 
-    # ===================================================== 16 · Quellen & TL;DR
-    s = _slide(prs, blank, "Quellen", 18, "Quellen & TL;DR")
+    # ===================================================== 16 · Hybrid-Mega-Workflow (NEU)
+    s = _slide(prs, blank, "Hybrid-Loop", 18, "§16 Hybrid-Mega-Workflow — State-Sync + RPI")
+    tf = _box(s, 0.7, 1.8, 12.0, 0.5)
+    _set(tf, "state/ ist die Wahrheit · WORKING-CONTEXT.md ist ihr generiertes Spiegelbild für den Loop.",
+         size=14, color=P_AMBER, bold=True)
+    _round(s, 0.7, 2.4, 11.95, 1.75, P_CODE)
+    tf = _box(s, 1.0, 2.6, 11.4, 1.4)
+    for i, line in enumerate([
+            "state/*.md   --PRE (SessionStart)-->   WORKING-CONTEXT.md   (Loop: liest STATE:*, fuellt SYNC:*)",
+            "WORKING-CONTEXT.md   --POST (Stop/PreCompact)-->   state/progress.md + tasks.md   (nur Delta)"]):
+        _bullet(tf, line, size=12, color=PRGB(0x9C, 0xE3, 0xF0), first=(i == 0), font="Consolas")
+    tf = _box(s, 0.7, 4.35, 12.0, 0.4)
+    _set(tf, "/mega-plan — RPI-Berater PARALLEL (read-only) → Briefing → /plan:", size=14, color=P_INDIGO, bold=True)
+    _dtable(s, ["Berater", "Perspektive"], [
+        ["Intake", "Anforderungen · Constraints · offene Fragen"],
+        ["CTO", "Technik-Strategie · Architektur-Fit · Risiko"],
+        ["Product", "Scope · Requirements · Akzeptanzkriterien"],
+        ["UX", "Flows · States · Accessibility"],
+    ], 0.7, 4.75, 12.0, 1.55, col_w=[2.4, 9.6], fsize=11.5)
+    tf = _box(s, 0.7, 6.5, 12.0, 0.7)
+    _bullet(tf, "Additiv — ECC-Core (ecc/) unberührt · Garantien: Marker · atomar · idempotent · selftest (7 Checks).",
+            size=12.5, color=P_MUTED, first=True)
+
+    # ===================================================== 17 · Quellen & TL;DR
+    s = _slide(prs, blank, "Quellen", 19, "Quellen & TL;DR")
     tf = _box(s, 0.7, 1.9, 12.0, 1.7)
     _bullet(tf, "Guides von @affaanmustafa (X-Threads; lokal unter ecc/):", size=14, color=P_CYAN, bold=True, first=True)
     _bullet(tf, "Shortform: " + X_SHORT, size=11.5, color=P_TEXT)
