@@ -38,6 +38,8 @@ Wenn `ECC_REPO` nicht existiert, abbrechen und den User bitten, das BestPractice
 3. **ECC-Installer nutzen**, keine Dateien von Hand kopieren.
 4. **Keine Platzhalter** in PROJECT_RULES.md/state — nur verifizierte Fakten aus dem echten Code.
 5. **Keine Builds/Tests/Installs** ausführen, nur lesen (`Glob`/`Read`) und den ECC-Installer aufrufen.
+6. **ECC-Core unangetastet.** State-Sync wird rein **additiv** in der projekt-lokalen
+   `.claude/settings.json` registriert — niemals eine Datei unter `ecc/` editieren.
 
 ## Ablauf
 
@@ -72,7 +74,8 @@ Dem User kompakt zeigen:
 - erkannter Stack + Evidenz (welche Dateien)
 - gewähltes Profil + Sprach-Packs
 - was angelegt wird: `.claude/rules/ecc/` (common + Sprach-Pack), selektive `.claude/skills/ecc/`,
-  `PROJECT_RULES.md`, `state/{context,decisions,progress,tasks}.md`
+  `PROJECT_RULES.md`, `state/{context,decisions,progress,tasks}.md` **plus** additive State-Sync-Hooks
+  in der projekt-lokalen `.claude/settings.json` (SessionStart→`pre`, Stop/PreCompact→`post`)
 - Warnungen zu bereits existierenden Dateien (→ Merge statt Überschreiben)
 
 Genau **eine** Bestätigungsfrage. Bei `--dry-run`: hier stoppen, nichts schreiben.
@@ -86,6 +89,45 @@ node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <pro
 Legt `.claude/rules/ecc/` + selektive `.claude/skills/ecc/` im Projekt an (managed namespace).
 Verifizieren: `Install root` in der Ausgabe muss auf das **Zielprojekt** zeigen, nicht auf `$ECC_REPO/.claude`.
 
+### Schritt 4b — State-Sync-Hooks registrieren (additiv, ECC-Core unberührt)
+
+Den Hybrid-Loop verdrahten: `state/` (Quelle der Wahrheit) ⇄ `WORKING-CONTEXT.md` (Loop-Futter).
+Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settings.json` — nie in ECC.
+
+1. **`.claude/settings.json` lesen/anlegen** und die drei Lifecycle-Hooks **mergen** (vorhandene
+   Hooks-Arrays erweitern, nicht ersetzen). Idempotenz: nur eintragen, falls der `state-sync.js`-Aufruf
+   noch nicht vorhanden ist.
+
+   ```jsonc
+   {
+     "hooks": {
+       "SessionStart": [{ "matcher": "*", "hooks": [{ "type": "command",
+         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" pre" }] }],
+       "Stop":        [{ "matcher": "*", "hooks": [{ "type": "command",
+         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post" }] }],
+       "PreCompact":  [{ "matcher": "*", "hooks": [{ "type": "command",
+         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post" }] }]
+     }
+   }
+   ```
+
+   Liegt `bestpractice-extras/` **nicht** im Zielprojekt (Fremd-Repo), den absoluten Pfad zum
+   BestPractice-Repo verwenden:
+   `node "$EXTRAS/scripts/state-sync/state-sync.js" pre|post --project "$CLAUDE_PROJECT_DIR"`.
+
+2. **`state/.sync/` ins Projekt-`.gitignore`** aufnehmen (Snapshot-Cache, kein VCS) — nur anhängen,
+   falls noch nicht vorhanden.
+
+3. **Initialen PRE-Sync** ausführen, damit `WORKING-CONTEXT.md` sofort existiert (nach Schritt 5,
+   sobald `state/` befüllt ist):
+
+   ```bash
+   node "$EXTRAS/scripts/state-sync/state-sync.js" pre --project "<ZIELPROJEKT-ROOT>"
+   ```
+
+   Erwartung: `[state-sync] PRE ok: WORKING-CONTEXT.md aus state/ generiert`. Der No-op-Guard
+   überspringt still, falls (noch) kein `state/` existiert.
+
 ### Schritt 5 — Projekt-Kontext füllen (Routine aus adopt-project)
 
 Templates aus `$TEMPLATES` ins Projekt kopieren und mit **echten** Werten füllen:
@@ -93,8 +135,16 @@ Templates aus `$TEMPLATES` ins Projekt kopieren und mit **echten** Werten fülle
   Werte ersetzen; nicht zutreffende Abschnitte löschen. Sensitive Areas (auth, payments,
   migrations, crypto) per Grep auf Telltale-Imports (`stripe`, `jwt`, `bcrypt`, `migration`)
   identifizieren. 3–5 konkrete Projekt-Regeln aus echten Code-Mustern ableiten.
-- `state/{context,decisions,progress,tasks}.md`: `context.md` aus README + Manifest-Beschreibung
-  (2–3 Sätze) + `git log -20 --oneline` für aktuellen Fokus.
+- `state/{context,decisions,progress,tasks}.md` aus `$TEMPLATES/state/` kopieren. Diese Templates
+  enthalten **Marker-Sektionen** (`###`-Sub-Headings + HTML-Kommentar-Guidance); die Struktur
+  **erhalten**, nur Inhalte ergänzen:
+  - `context.md`: `### Purpose` aus README + Manifest-Beschreibung (2–3 Sätze), `### Current Truth`
+    aus `git log -20 --oneline` + Architektur-Kernfakten.
+  - `tasks.md`: `### Now`/`### Next` aus echten offenen TODOs/Issues/Ist-Zustand befüllen
+    (Grep nach `TODO`/`FIXME`, offene Punkte aus README). Neu = Grundgerüst lassen.
+  - `decisions.md`/`progress.md`: bei Bestand befüllen, sonst leeres Gerüst belassen.
+  Der State-Sync liest nur diese vier Dateien; die HTML-Kommentare bleiben im generierten
+  `WORKING-CONTEXT.md` unsichtbar.
 - Optionale projekt-spezifische `.claude/rules/<area>.md` (mit `paths:`-Frontmatter) **nur** für
   Bereiche, die das Projekt wirklich hat (z.B. `api-routes.md`, `database.md`, `testing.md`).
 
@@ -111,18 +161,21 @@ build/test/lint/dev-Befehlen. Vorhandene `CLAUDE.md` nie ohne Diff+OK ersetzen.
 
 ### Schritt 8 — Report
 
-Berichten: welche Dateien angelegt/gefüllt, welche Werte verifiziert vs. erfragt,
+Berichten: welche Dateien angelegt/gefüllt, welche Werte verifiziert vs. erfragt, ob die
+State-Sync-Hooks registriert wurden und ob der initiale PRE-Sync `WORKING-CONTEXT.md` erzeugt hat,
 offene Fragen (max 5, nach Wichtigkeit), nächster Schritt (i.d.R.: PROJECT_RULES.md prüfen,
 dann mit `/plan` → `/feature-dev` loslegen).
 
 ## Idempotenz
 
 Erneuter Aufruf merged, überschreibt nichts kommentarlos. Der ECC-Installer trackt den
-project-level State; bereits installierte Surfaces werden inkrementell aktualisiert.
+project-level State; bereits installierte Surfaces werden inkrementell aktualisiert. Die
+State-Sync-Hooks werden nur eingetragen, falls der `state-sync.js`-Aufruf noch fehlt.
 
 ## Verwandt
 
 - `/project-init` — nur Dry-Run-Inspektion (ECC, weiterhin verfügbar)
 - `/ecc-guide` — interaktive Komponenten-Discovery vor Installation
+- `bestpractice-extras/scripts/state-sync/` — State-Sync-Adapter (PRE/POST, `selftest.js`)
 - `scripts/install-plan.js` / `scripts/install-apply.js` — deterministische Plan-/Apply-Operationen
 - `config/project-stack-mappings.json` — Stack→Rules/Skills-Hinweise
