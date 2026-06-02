@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  harness-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON config files
+        run: |
+          set -e
+          for f in .claude/settings.json .mcp.json; do
+            if [ -f "$f" ]; then
+              node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" && echo "ok: $f"
+            fi
+          done
+
+      - name: Core-untouched guard (ecc/ should not be patched in PRs)
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^ecc/'; then
+            echo "::error::ecc/ (ECC-Core, Schicht 1) wurde geaendert — Aenderungen gehoeren in bestpractice-extras/"
+            exit 1
+          fi
+          echo "ok: ecc/ unberuehrt"

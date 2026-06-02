@@ -1,0 +1,5 @@
+# Default-Owner für das gesamte Repo
+*       @Paulee8155
+
+# ECC-Core (Schicht 1) — vendored, Änderungen nur in Ausnahmefällen
+/ecc/   @Paulee8155
