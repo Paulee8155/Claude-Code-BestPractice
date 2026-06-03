@@ -1,4 +1,65 @@
-# Claude Code BestPractice — Projektkontext
+# CLAUDE.md — Arbeitsvertrag für Claude
+
+> Dieses File ist eine **Anleitung für Claude**, keine Projektbeschreibung.
+> Projektdetails stehen in `PROJECT_RULES.md`. ECC-Core unter `ecc/` — NIEMALS editieren.
+
+## Pflicht-Workflow (ECC 5-Phasen — jede Aufgabe > 30 Min)
+
+1. **RESEARCH** — Explore-Agent / `gh search code` / claude-mem BEVOR neuer Code
+2. **PLAN** — `/plan` aufrufen, auf OK warten. Ohne OK: kein Code.
+3. **IMPLEMENT** — `/feature-dev` + TDD: Tests ZUERST (RED → GREEN → REFACTOR)
+4. **REVIEW** — `/code-review` + sprachspezifisch (`/typescript-reviewer` etc.)
+5. **VERIFY** — Tests + Build grün. Erst dann fertig melden.
+
+Bug → `/systematic-debugging` BEVOR Fix. Nie drauflos coden.
+
+## Modell-Matrix (Guides von @affaanmustafa)
+
+| Aufgabe | Modell | Warum |
+|---|---|---|
+| Exploration, Suche, einfache Edits, Doku | **Haiku 4.5** | schnell, günstig, ausreichend |
+| Standard-Coding, Multi-File, PR-Review | **Sonnet 4.6** | bestes Balance-Modell (90% der Tasks) |
+| Komplexe Architektur, Security, hartnäckige Bugs | **Opus 4.8** | tiefes Reasoning, darf nichts übersehen |
+
+Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturentscheidung · Security-kritisch.
+
+## Pflicht-Commands
+
+| Situation | Command |
+|---|---|
+| Neue Aufgabe > 30 Min | `/plan` (wartet auf OK!) |
+| Feature umsetzen | `/feature-dev` |
+| Bug | `/systematic-debugging` |
+| Code geschrieben | `/code-review` |
+| Build rot | `/build-fix` |
+| Session-Ende | `/save-session` |
+| Tagesstart | `/start` |
+| Projekt ECC-ready | `/ecc-onboard` |
+| Codebase kartieren | `/update-codemaps` |
+
+## Token-Budget
+
+- `/compact` mit Hint bei > 40% Kontext — nie autocompact abwarten
+- `/clear` vor neuem unabhängigen Thema
+- mgrep statt grep wenn verfügbar (50% Token-Ersparnis)
+- Sequential Thinking für komplexe Mehrschritt-Probleme nutzen
+- MCPs: max 10 aktiv, max 80 Tools
+
+## Sicherheits-Checkliste (vor jedem Commit)
+
+- [ ] Keine hardcodierten Secrets
+- [ ] Alle User-Inputs validiert
+- [ ] Kein `console.log` in Production-Code
+- [ ] SQL-Injection + XSS verhindert
+
+## Hooks (aktiv)
+
+- **PostToolUse**: quality-gate + accumulator (Edit/Write) · console-warn (Edit)
+- **Stop**: format-typecheck · check-console-log · session-end
+- **SessionStart**: session-start-bootstrap
+- **PreCompact**: pre-compact
+
+## Harness-Architektur
 
 Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schicht 2)**.
 

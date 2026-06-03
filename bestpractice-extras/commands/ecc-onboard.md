@@ -70,7 +70,8 @@ aufrufen — niemals `cd "$ECC_REPO"` (sonst landet alles in ECCs eigenem `.clau
 
 ```bash
 cd "<ZIELPROJEKT-ROOT>"   # = das Projekt, das ECC-ready werden soll (i.d.R. das aktuelle cwd)
-node "$ECC_REPO/scripts/install-plan.js"  --profile <profil> --target claude-project --json
+# WICHTIG: install-plan.js NICHT für Dry-Run verwenden — es übergibt kein projectRoot
+# und installiert dann ins ECC-Repo statt ins Zielprojekt. Immer install-apply.js --dry-run nutzen:
 node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <profil> --dry-run --json
 ```
 Bei `--skills`/`--config` die entsprechenden Flags statt `--profile` verwenden.
