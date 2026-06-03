@@ -140,6 +140,32 @@ Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settin
    Erwartung: `[state-sync] PRE ok: WORKING-CONTEXT.md aus state/ generiert`. Der No-op-Guard
    überspringt still, falls (noch) kein `state/` existiert.
 
+### Schritt 4c — Consumer-Konformität & Modell-Override (Schicht 2, NACH dem Apply)
+
+Der managed Installer legt die ECC-Surfaces (`.claude/rules`, `skills`, `agents`, …) an, **nicht**
+aber die Consumer-Artefakte, die der `harness-audit` als ECC-Konformität wertet. Dieses Script
+schließt die Lücke — idempotent und additiv (überschreibt nie bestehende User-Dateien):
+
+```bash
+node "$EXTRAS/scripts/onboard/consumer-scaffold.js" --project "<ZIELPROJEKT-ROOT>"
+# --dry-run zeigt nur an; --ecc-repo <pfad> überschreibt die .mcp.json-Quelle
+```
+
+Legt an (nur falls fehlend) und deckt damit diese Audit-Checks:
+- `.claude/memory.md` → **consumer-memory-notes**
+- `SECURITY.md` → **consumer-security-policy**
+- `.mcp.json` (kopiert aus `$ECC_REPO/.mcp.json`) → **consumer-project-config**
+- `.gitignore`-Secret-Block (`.env`, `*.pem`, …) → **consumer-secret-hygiene**
+
+**Modell-Override (ECC-Matrix: Security-kritisch → Opus):** patcht das project-level
+`.claude/agents/security-reviewer.md` von `model: sonnet` auf `opus`. **Muss nach Schritt 4
+laufen** — der managed Re-Sync setzt den Core-Default (`sonnet`) sonst zurück. Bei erneutem
+`/ecc-onboard` daher immer auch dieses Script erneut ausführen (idempotent).
+
+> Bewusst NICHT erzeugt: `tests/`, CI-Workflows, GitHub-Templates — das ist echtes Projekt-Setup
+> und wird nicht künstlich angelegt. Bei leerem Stack bleibt der Audit-Score daher unter 39/39
+> (typisch ~18/39); mit echtem Code/Tests/CI/Repo steigt er entsprechend.
+
 ### Schritt 5 — Projekt-Kontext füllen (Routine aus adopt-project)
 
 Templates aus `$TEMPLATES` ins Projekt kopieren. Dann **deterministisch vorbefüllen** (Auto-Kontext):
@@ -177,10 +203,13 @@ Wenn `.harness-backup/<ts>/` oder altes `CLAUDE.md`/`state/` existiert: custom I
 generischen Harness-Regeln) in `PROJECT_RULES.md` „Project-Specific Rules" bzw. die neuen
 `state/`-Dateien mergen. Nichts kommentarlos verwerfen.
 
-### Schritt 7 — Optionaler CLAUDE.md-Starter
+### Schritt 7 — CLAUDE.md-Starter (Standard)
 
-Falls gewünscht und keine projekt-`CLAUDE.md` existiert: minimaler Starter mit erkannten
-build/test/lint/dev-Befehlen. Vorhandene `CLAUDE.md` nie ohne Diff+OK ersetzen.
+Wenn keine projekt-`CLAUDE.md` (oder `AGENTS.md`) existiert: einen minimalen Starter mit
+erkannten build/test/lint/dev-Befehlen anlegen — das erfüllt **consumer-instructions** (3pt) und
+gibt Claude den projekt-spezifischen Arbeitsvertrag. Vorhandene `CLAUDE.md` nie ohne Diff+OK
+ersetzen. Bei leerem Stack einen knappen Starter (Zweck + 5-Phasen-Workflow + Platzhalter für
+build/test/lint, bis ein Stack vorliegt).
 
 ### Schritt 8 — Report
 
@@ -204,5 +233,6 @@ State-Sync-Hooks werden nur eingetragen, falls der `state-sync.js`-Aufruf noch f
 - `/project-init` — nur Dry-Run-Inspektion (ECC, weiterhin verfügbar)
 - `/ecc-guide` — interaktive Komponenten-Discovery vor Installation
 - `bestpractice-extras/scripts/state-sync/` — State-Sync-Adapter (PRE/POST, `selftest.js`)
+- `bestpractice-extras/scripts/onboard/consumer-scaffold.js` — Consumer-Konformität + security-reviewer→opus (Schritt 4c)
 - `scripts/install-plan.js` / `scripts/install-apply.js` — deterministische Plan-/Apply-Operationen
 - `config/project-stack-mappings.json` — Stack→Rules/Skills-Hinweise
