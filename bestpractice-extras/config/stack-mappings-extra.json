@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "description": "Schicht-2-Overlay: ergänzt project-stack-mappings.json (ECC-Core) um weitere Stacks. /ecc-onboard merged diese Liste ÜBER die Core-Stacks (gleiche id gewinnt aus Overlay). Core-JSON bleibt unberührt.",
+  "stacks": [
+    {
+      "id": "angular",
+      "name": "Angular",
+      "indicators": [
+        { "file": "angular.json" },
+        { "file": "package.json", "contains": "@angular/core" }
+      ],
+      "rules": ["common", "typescript", "angular", "web"],
+      "skills": ["angular-developer", "coding-standards", "frontend-patterns", "accessibility", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["npx ng build", "npm run build"],
+        "test": ["npx ng test --watch=false", "npm test"],
+        "lint": ["npx ng lint", "npx eslint ."],
+        "format": ["npx prettier --write ."],
+        "dev": ["npx ng serve", "npm start"]
+      },
+      "permissions": {
+        "allow": ["npx ng *", "npx eslint", "npx prettier", "npm test", "npm run *"],
+        "deny": ["npm publish"]
+      }
+    },
+    {
+      "id": "vue",
+      "name": "Vue.js",
+      "indicators": [
+        { "file": "vue.config.*" },
+        { "file": "package.json", "contains": "\"vue\":" }
+      ],
+      "rules": ["common", "typescript", "web"],
+      "skills": ["coding-standards", "frontend-patterns", "vite-patterns", "accessibility", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["npm run build", "npx vite build"],
+        "test": ["npm test", "npx vitest"],
+        "lint": ["npx eslint ."],
+        "format": ["npx prettier --write ."],
+        "dev": ["npm run dev", "npx vite"]
+      },
+      "permissions": {
+        "allow": ["npx vite *", "npx eslint", "npx prettier", "npm test", "npm run *", "npx vitest"],
+        "deny": ["npm publish"]
+      }
+    },
+    {
+      "id": "nuxt",
+      "name": "Nuxt",
+      "indicators": [
+        { "file": "nuxt.config.*" },
+        { "file": "package.json", "contains": "\"nuxt\":" }
+      ],
+      "rules": ["common", "typescript", "web"],
+      "skills": ["coding-standards", "nuxt4-patterns", "frontend-patterns", "backend-patterns", "vite-patterns", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["npm run build", "npx nuxi build"],
+        "test": ["npm test", "npx vitest"],
+        "lint": ["npx eslint ."],
+        "format": ["npx prettier --write ."],
+        "dev": ["npm run dev", "npx nuxi dev"]
+      },
+      "permissions": {
+        "allow": ["npx nuxi *", "npx vite *", "npx eslint", "npx prettier", "npm test", "npm run *", "npx vitest"],
+        "deny": ["npm publish"]
+      }
+    },
+    {
+      "id": "svelte",
+      "name": "Svelte / SvelteKit",
+      "indicators": [
+        { "file": "svelte.config.*" },
+        { "file": "package.json", "contains": "svelte" }
+      ],
+      "rules": ["common", "typescript", "web"],
+      "skills": ["coding-standards", "frontend-patterns", "vite-patterns", "accessibility", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["npm run build", "npx vite build"],
+        "test": ["npm test", "npx vitest"],
+        "lint": ["npx eslint .", "npx svelte-check"],
+        "format": ["npx prettier --write ."],
+        "dev": ["npm run dev", "npx vite dev"]
+      },
+      "permissions": {
+        "allow": ["npx vite *", "npx svelte-check", "npx eslint", "npx prettier", "npm test", "npm run *", "npx vitest"],
+        "deny": ["npm publish"]
+      }
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI (Python)",
+      "indicators": [
+        { "file": "requirements.txt", "contains": "fastapi" },
+        { "file": "pyproject.toml", "contains": "fastapi" }
+      ],
+      "rules": ["common", "python"],
+      "skills": ["fastapi-patterns", "backend-patterns", "python-patterns", "python-testing", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["pip install -e ."],
+        "test": ["pytest", "python -m pytest"],
+        "lint": ["ruff check .", "mypy ."],
+        "format": ["ruff format .", "black ."],
+        "dev": ["uvicorn main:app --reload", "fastapi dev"]
+      },
+      "permissions": {
+        "allow": ["python *", "pip install *", "pytest *", "ruff *", "black *", "mypy *", "uvicorn *", "fastapi *"],
+        "deny": []
+      }
+    },
+    {
+      "id": "flask",
+      "name": "Flask (Python)",
+      "indicators": [
+        { "file": "requirements.txt", "contains": "flask" },
+        { "file": "pyproject.toml", "contains": "flask" }
+      ],
+      "rules": ["common", "python"],
+      "skills": ["backend-patterns", "python-patterns", "python-testing", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["pip install -e ."],
+        "test": ["pytest", "python -m pytest"],
+        "lint": ["ruff check .", "mypy ."],
+        "format": ["ruff format .", "black ."],
+        "dev": ["flask run --debug"]
+      },
+      "permissions": {
+        "allow": ["python *", "pip install *", "pytest *", "ruff *", "black *", "mypy *", "flask *"],
+        "deny": []
+      }
+    },
+    {
+      "id": "elixir-phoenix",
+      "name": "Elixir / Phoenix",
+      "indicators": [
+        { "file": "mix.exs" },
+        { "file": "mix.lock" }
+      ],
+      "rules": ["common"],
+      "skills": ["backend-patterns", "tdd-workflow", "verification-loop"],
+      "commands": {
+        "build": ["mix compile"],
+        "test": ["mix test"],
+        "lint": ["mix credo", "mix format --check-formatted"],
+        "format": ["mix format"],
+        "dev": ["mix phx.server"]
+      },
+      "permissions": {
+        "allow": ["mix *", "iex *"],
+        "deny": ["mix hex.publish"]
+      }
+    },
+    {
+      "id": "terraform",
+      "name": "Terraform / IaC",
+      "indicators": [
+        { "file": "*.tf" },
+        { "file": "main.tf" },
+        { "file": ".terraform.lock.hcl" }
+      ],
+      "rules": ["common"],
+      "skills": ["deployment-patterns", "docker-patterns"],
+      "commands": {
+        "build": ["terraform plan"],
+        "test": ["terraform validate"],
+        "lint": ["terraform fmt -check", "tflint"],
+        "format": ["terraform fmt"]
+      },
+      "permissions": {
+        "allow": ["terraform validate", "terraform plan", "terraform fmt *", "tflint *"],
+        "deny": ["terraform apply", "terraform destroy"]
+      }
+    }
+  ]
+}

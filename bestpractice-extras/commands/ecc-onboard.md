@@ -27,6 +27,9 @@ ECC_REPO="/root/projekte/Claude Code BestPractice/ecc"
 EXTRAS="/root/projekte/Claude Code BestPractice/bestpractice-extras"
 TEMPLATES="$EXTRAS/templates"
 STACK_MAP="$ECC_REPO/config/project-stack-mappings.json"
+STACK_MAP_EXTRA="$EXTRAS/config/stack-mappings-extra.json"   # Schicht-2-Overlay (weitere Stacks)
+HARVEST="$EXTRAS/scripts/context-harvest/harvest.js"          # deterministische Auto-Kontext-Generierung
+AUDIT="/root/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js"  # Baseline-/Verify-Audit
 ```
 Wenn `ECC_REPO` nicht existiert, abbrechen und den User bitten, das BestPractice-Repo zu prüfen.
 
@@ -53,6 +56,10 @@ Projekt-Root lesen und Stack-Signale sammeln (überspringen was fehlt):
 
 Daraus Sprach-/Framework-Komponenten ableiten (Mapping in `$STACK_MAP`):
 z.B. `lang:python`, `lang:typescript`, `lang:go`, `framework:django`, `framework:nextjs`.
+
+Zusätzlich `$STACK_MAP_EXTRA` (Schicht-2-Overlay) berücksichtigen — deckt **Angular, Vue, Nuxt,
+Svelte, FastAPI, Flask, Elixir/Phoenix, Terraform** ab. Bei gleicher `id` gewinnt der Overlay-
+Eintrag; der Core-`$STACK_MAP` bleibt unberührt (additiv darüber gemergt).
 Default-Profil: **`developer`** (bei unklarem/leerem Stack: **`core`**).
 
 ### Schritt 2 — Dry-Run-Plan erzeugen
@@ -67,6 +74,10 @@ node "$ECC_REPO/scripts/install-plan.js"  --profile <profil> --target claude-pro
 node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <profil> --dry-run --json
 ```
 Bei `--skills`/`--config` die entsprechenden Flags statt `--profile` verwenden.
+
+**Baseline-Audit (Verify-Vorbereitung):** `node "$AUDIT"` aus dem **Zielprojekt-Root** laufen
+lassen und den Score notieren (z.B. `7/39`). Das ist die Vergleichsbasis für das Verify-Audit in
+Schritt 8 — so wird „fehlender Kontext generiert" messbar statt nur behauptet.
 
 ### Schritt 3 — Einmal bestätigen (AskUserQuestion)
 
@@ -130,7 +141,18 @@ Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settin
 
 ### Schritt 5 — Projekt-Kontext füllen (Routine aus adopt-project)
 
-Templates aus `$TEMPLATES` ins Projekt kopieren und mit **echten** Werten füllen:
+Templates aus `$TEMPLATES` ins Projekt kopieren. Dann **deterministisch vorbefüllen** (Auto-Kontext):
+
+```bash
+node "$HARVEST" --project "<ZIELPROJEKT-ROOT>"   # NACH dem Kopieren von state/
+```
+Erzeugt verlustfreie HARVEST-Marker-Blöcke aus **echtem Code**: `state/context.md`
+(`### Current Truth` aus README-Erstabsatz + `git log -20`), `state/tasks.md` (`### Now` aus
+TODO/FIXME mit `file:line`) und — falls vorhanden — `PROJECT_RULES.md` (`## Sensitive Areas` aus
+Telltale-Imports stripe/jwt/bcrypt/migration). **Idempotent** (Re-Run dedupliziert) und
+**verlustfrei** (Mensch-Inhalt außerhalb der Marker bleibt). `--dry-run` zeigt nur an.
+
+Anschließend die generierten Blöcke mit **echten** Werten prüfen/verfeinern (nicht ersetzen):
 - `PROJECT_RULES.template.md` → `PROJECT_RULES.md`: alle `[Platzhalter]` durch verifizierte
   Werte ersetzen; nicht zutreffende Abschnitte löschen. Sensitive Areas (auth, payments,
   migrations, crypto) per Grep auf Telltale-Imports (`stripe`, `jwt`, `bcrypt`, `migration`)
@@ -160,6 +182,10 @@ Falls gewünscht und keine projekt-`CLAUDE.md` existiert: minimaler Starter mit 
 build/test/lint/dev-Befehlen. Vorhandene `CLAUDE.md` nie ohne Diff+OK ersetzen.
 
 ### Schritt 8 — Report
+
+**Verify-Audit (Delta):** `node "$AUDIT"` erneut aus dem Zielprojekt-Root laufen lassen und den
+**Score-Delta** gegen die Baseline aus Schritt 2 ausweisen (z.B. `7/39 → 30/39`). Belegt konkret,
+dass Kontext generiert wurde und die Custom-Tools/Hooks greifen.
 
 Berichten: welche Dateien angelegt/gefüllt, welche Werte verifiziert vs. erfragt, ob die
 State-Sync-Hooks registriert wurden und ob der initiale PRE-Sync `WORKING-CONTEXT.md` erzeugt hat,
