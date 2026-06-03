@@ -9,7 +9,7 @@
 
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Note: Co-Authorship-Attribution ist AKTIV (siehe Projekt-CLAUDE.md — Commits mit "Co-Authored-By:" abschliessen). Zum Deaktivieren includeCoAuthoredBy: false in ~/.claude/settings.json setzen.
+Note: Attribution disabled globally via ~/.claude/settings.json.
 
 ## Pull Request Workflow
 
