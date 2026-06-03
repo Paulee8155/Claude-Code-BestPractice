@@ -69,7 +69,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 |---|---|---|
 | **1 — ECC-Core** | `ecc/` (vendored, als Plugin `ecc@ecc` registriert) | **Unberührt lassen.** Nicht von Hand editieren — additiv erweitern, nicht patchen. |
 | **2 — Extras** | `bestpractice-extras/` | Eigene agents/commands/rules/templates + `state-sync/`. Additive Wrapper um den Core. |
-| Doku | `docs/` | ECC-Erklärbuch, Harness-Guide, Mega-Workflow, Audit-Reports. |
+| Doku | `docs/` | ECC-Erklärbuch (Single Source), Harness-Guide (docx/pptx-Snapshot), Mega-Workflow. |
 
 ## Arbeitsweise
 
@@ -89,6 +89,16 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 - `/start` — Tagesstart in einem Befehl (State-Sync PRE + rtk + Agenda + 1 Folgebefehl).
 - `/ecc-onboard` — Projekt ECC-ready machen (Stack-Detection + state-sync).
 - `/mega-plan` — RPI-Berater (CTO/PM/UX/Intake) parallel → Briefing → ECCs `/plan`.
+
+## Schicht-2-Tooling
+
+- **mgrep** (semantische Suche, ersetzt grep — ~50 % Token-Ersparnis): Auth via
+  `MXBAI_API_KEY` im `env`-Block von `~/.claude/settings.json` (user-scoped, **nicht** im
+  Repo). Index bauen/aktualisieren: `bash bestpractice-extras/scripts/mgrep/index.sh`,
+  danach `mgrep search "<konzept>"`. ⚠️ `index.sh` lädt den Quellbaum in die Mixedbread-Cloud
+  (Outbound) — bewusst manuell. Details: `bestpractice-extras/scripts/mgrep/README.md`.
+- **LSP-Plugins** `typescript-lsp` + `pyright-lsp` (user-scoped installiert) — Echtzeit-
+  Typecheck & go-to-definition im Terminal ohne IDE.
 
 ## Core-Integrität & Attribution
 

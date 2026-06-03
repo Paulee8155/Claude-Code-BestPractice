@@ -5,8 +5,9 @@
 > welche Agenten / Skills / Commands / Hooks existieren, wie alles zusammenhängt und was
 > passiert, wenn du das System in einem neuen Projekt einrichtest.
 >
-> **Stand:** 2026-06-02 · synchron mit Upstream `affaan-m/ecc` (63 Agenten, 249 Skills,
-> 79 Commands, 29 Hooks) — plus deine eigenen Erweiterungen.
+> **Stand:** 2026-06-03 · synchron mit Upstream `affaan-m/ecc` (63 Agenten, 249 Skills,
+> 79 Commands, 29 Hooks) — plus deine eigenen Erweiterungen (Schicht 2) und das
+> Schicht-2-Tooling (mgrep semantische Suche, LSP-Plugins).
 
 ---
 
@@ -119,6 +120,10 @@ Wenn du nur 5 Minuten hast — das ist die ungenutzte Power, die du sofort abruf
 
 - `/mega-plan <Ziel>` — bei vagen/großen Zielen: 4 Berater (Intake, CTO, Product, UX) beraten **parallel**, bevor `/plan` startet.
 - `/ecc-onboard` — neues Projekt in einem Befehl ECC-ready machen.
+- **mgrep** — semantische Suche statt grep (~50 % Token-Ersparnis). Einrichtung +
+  Index siehe [Abschnitt 9b](#9b-mgrep-semantische-suche). Nutzung: `mgrep search "<konzept>"`.
+- **LSP-Plugins** (`typescript-lsp`, `pyright-lsp`) — Echtzeit-Typecheck & go-to-definition
+  im Terminal, ohne IDE.
 
 ---
 
@@ -502,6 +507,46 @@ Nag-Erinnerungen ähnlicher Art wie GateGuard — deshalb lohnt strict für dich
 
 ---
 
+## 9b. mgrep — semantische Suche
+
+**mgrep** (`@mixedbread/mgrep`) ersetzt grep/ripgrep durch **semantische** Suche: statt nach
+exakten Mustern zu raten, findet es Code/Doku nach **Konzept** ("wie werden Agent-Modelle
+zugewiesen?") — laut Guide ~50 % weniger Token. Es ist **Schicht-2-Tooling**, kein ECC-Core.
+
+### Wie es funktioniert
+mgrep indexiert den Quellbaum in der **Mixedbread-Cloud** (Embeddings) und sucht dann
+dagegen. Das heißt: einmal hochladen (Index), danach beliebig oft suchen.
+
+### Einrichtung (einmalig)
+1. **CLI:** `npm install -g @mixedbread/mgrep`
+2. **API-Key** auf platform.mixedbread.com erzeugen (`mxb_…`).
+3. **Key hinterlegen** im `env`-Block von `~/.claude/settings.json`:
+   `{ "env": { "MXBAI_API_KEY": "mxb_…" } }` — user-scoped, **nicht** im Repo. Das ist der
+   von der mgrep-Doku empfohlene headless-Weg (umgeht den interaktiven Browser-Login, der in
+   der Claude-Bash-Umgebung nicht zuverlässig greift).
+
+### Index bauen / aktualisieren
+```bash
+bash bestpractice-extras/scripts/mgrep/index.sh
+```
+Liest den Key aus `settings.json`, setzt das Datei-Limit (~2,5 k Dateien inkl. vendored
+`ecc/`), startet `mgrep watch`. Nach dem initialen Sync (`processed / uploaded`) mit **Ctrl+C**
+beenden — der Store bleibt durchsuchbar; `watch` muss **nicht** laufen.
+
+### ⚠️ Outbound-Hinweis
+`mgrep watch` lädt Dateiinhalte in die externe Cloud. Pro Repo eine bewusste Entscheidung;
+`.gitignore` wird respektiert (keine `node_modules`/Secrets). Der Claude-Code Auto-Mode
+**blockt** den Bulk-Upload absichtlich als Exfiltrations-Schutz — deshalb wird er **manuell**
+über das Script angestoßen, nie automatisch durch Claude.
+
+### Suchen
+```bash
+mgrep search "consumer scaffold onboarding"   # konzeptuell, auch in .docx
+```
+Details: `bestpractice-extras/scripts/mgrep/README.md`.
+
+---
+
 ## 10. Deine eigenen Erweiterungen
 
 Alle Eigenbauten liegen getrennt vom Upstream unter `bestpractice-extras/` und `docs/`. Sie
@@ -606,15 +651,15 @@ Zwei Ebenen:
 `ECC-WORKFLOW-GUIDE.de.md`, die drei Leitfäden, der Ordner `docs/` mit Übersetzungen. Bei
 Bedarf manuell aktualisiert. (Dieses Erklärbuch gehört auch dazu.)
 
-**2. Das erzeugte Begleit-Dokument (automatisch).** Generator: `docs/build_guide.py` (im
-Hauptordner, eine Ebene über `ecc/`):
-- **Eine Quelle, zwei Formate:** nimmt die deutschsprachigen Inhalte und gießt sie in
-  `docs/ECC-Harness-Guide.de.docx` (Word) **und** `docs/ECC-Harness-Guide.de.pptx`
-  (PowerPoint).
-- **Aufruf:** `python3 docs/build_guide.py` (nutzt `python-docx` + `python-pptx`).
-- **Aktuell halten:** Text im Skript anpassen, Befehl erneut ausführen → Word & PowerPoint
-  sofort wieder identisch. Kennzahlen (63 Agents, 249 Skills, ~80 Commands) sind im Skript
-  als "einzige Quelle der Wahrheit" verankert.
+**2. Die Begleit-Dokumente (statische Snapshots).** `docs/ECC-Harness-Guide.de.docx` (Word)
+und `docs/ECC-Harness-Guide.de.pptx` (PowerPoint) sind **eingefrorene Momentaufnahmen** für
+die Weitergabe an Nicht-Coder.
+- **Single Source of Truth ist Markdown:** maßgeblich sind dieses Erklärbuch und
+  `docs/MEGA-WORKFLOW.de.md`. Die docx/pptx werden **nicht** live aus dem Repo generiert —
+  ein früherer `build_guide.py`-Generator existiert aktuell **nicht** mehr im Repo.
+- **Aktuell halten:** Inhalte hier im Markdown pflegen. Wenn ein neuer Word-/PPTX-Snapshot
+  gebraucht wird, kann er mit `python-docx` + `python-pptx` aus dem Markdown neu erzeugt
+  werden (Generator bei Bedarf neu aufsetzen).
 
 ---
 
