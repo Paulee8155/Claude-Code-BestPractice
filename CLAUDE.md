@@ -1,7 +1,7 @@
 # CLAUDE.md — Arbeitsvertrag für Claude
 
 > Dieses File ist eine **Anleitung für Claude**, keine Projektbeschreibung.
-> Projektdetails stehen in `PROJECT_RULES.md`. ECC-Core unter `ecc/` — NIEMALS editieren.
+> Projektdetails stehen in `PROJECT_RULES.md`. ECC-Core = globales Plugin `ecc@ecc` (nicht vendored). Landkarte: `docs/WO-LAEUFT-WAS.md`.
 
 ## Pflicht-Workflow (ECC 5-Phasen — jede Aufgabe > 30 Min)
 
@@ -52,12 +52,13 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 - [ ] Kein `console.log` in Production-Code
 - [ ] SQL-Injection + XSS verhindert
 
-## Hooks (projekt-lokales Opt-in — NICHT global)
+## Hooks (offizielle Profil-Mechanik)
 
-ECC-Lifecycle-Hooks sind **global deaktiviert** über `~/.claude/settings.json` →
-`env.ECC_DISABLED_HOOKS` (alle FLAGGED-IDs). Projekte aktivieren sie **bewusst** projekt-lokal,
-indem `.claude/settings.json` → `env.ECC_DISABLED_HOOKS` global überschreibt (nur die 2
-gateguard-IDs gesetzt → der Rest re-aktiviert). `/ecc-onboard` macht das automatisch.
+ECC-Lifecycle-Hooks werden über `ECC_HOOK_PROFILE` gesteuert (Upstream-Default `standard`).
+**Global** (`~/.claude/settings.json`) steht `ECC_HOOK_PROFILE=minimal` → in Nicht-ECC-Projekten
+feuern nur essenzielle Hooks. **Projekt-lokal** (onboarded) setzt `.claude/settings.json` →
+`env.ECC_HOOK_PROFILE=standard` → volle Pipeline nur dort. `/ecc-onboard` macht das automatisch.
+Details siehe Abschnitt „Hook-Scope" unten + `docs/WO-LAEUFT-WAS.md`.
 
 - **In ECC-Projekten aktiv** (via env-Override): quality-gate + accumulator + console-warn
   (PostToolUse) · observe/governance/metrics · pre:compact — alle FLAGGED-Hooks aus dem Plugin.
@@ -74,28 +75,32 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 | Schicht | Pfad | Regel |
 |---|---|---|
-| **1 — ECC-Core** | `ecc/` (vendored, als Plugin `ecc@ecc` registriert) | **Unberührt lassen.** Nicht von Hand editieren — additiv erweitern, nicht patchen. |
+| **1 — ECC-Core** | **globales Plugin** `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1` (`ecc@ecc`) | **Single Source.** Nicht vendoren, nicht patchen — Verhalten nur über Env-Vars + Schicht 2 ändern. |
 | **2 — Extras** | `bestpractice-extras/` | Eigene agents/commands/rules/templates + `state-sync/`. Additive Wrapper um den Core. |
-| Doku | `docs/` | ECC-Erklärbuch (Single Source), Harness-Guide (docx/pptx-Snapshot), Mega-Workflow. |
+| Doku | `docs/` | `WO-LAEUFT-WAS.md` (Landkarte, Single Source), ECC-Erklärbuch, Harness-Guide, Mega-Workflow. |
 
 ## Arbeitsweise
 
 - **ECC-Workflow einhalten:** RESEARCH → PLAN (`/plan`, wartet auf OK) → IMPLEMENT (TDD) → REVIEW (`/code-review`) → VERIFY.
-- **Core unberührt:** Änderungen am ECC-Verhalten laufen über Schicht 2, nie durch Edits in `ecc/`.
+- **Core unberührt:** Änderungen am ECC-Verhalten laufen über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2, nie durch Edits am Plugin.
 - **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js` → Repo-Integrität.
 - **Modell:** Opus 4.8 (1M) Standard; `/model-route` vor mehrdeutigen/architektonischen Aufgaben.
 
-## Hook-Scope (global aus, projekt-lokal an)
+## Hook-Scope (offizielle ECC-Mechanik: Profil statt ID-Liste)
 
-- **Global** (`~/.claude/settings.json`): `env.ECC_DISABLED_HOOKS` = **alle 18 FLAGGED-IDs + gateguard**
-  → ECC-Plugin-Hooks feuern in Nicht-ECC-Projekten nicht. Plugin selbst bleibt `enabledPlugins: true`
-  (Commands/Skills/Agents/MCP überall verfügbar; nur die Hooks sind stillgelegt).
-- **Projekt-lokal** (onboarded): `env.ECC_DISABLED_HOOKS` = **nur die 2 gateguard-IDs** → überschreibt
-  global, die 18 FLAGGED-Hooks (quality-gate, console-warn, accumulate, observe, governance, metrics,
-  pre:compact …) sind dort wieder aktiv. Gateguard bleibt bewusst aus.
-- **Onboarded Projekte mit Override:** `Claude Code BestPractice`, `Test-ECC`, `Verladelisten_Hafen`.
-- **Backup vor Umstellung:** `~/.claude/settings.json.bak-<stamp>` + Projekt-Backups (Stempel in
-  `/tmp/ecc-migration-stamp`).
+> Vollständige Landkarte: `docs/WO-LAEUFT-WAS.md` (Single Source).
+
+- **Global** (`~/.claude/settings.json`): `env.ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off`
+  → in Nicht-ECC-Projekten feuern nur essenzielle Hooks (kein quality-gate/governance/observe).
+  Plugin bleibt überall verfügbar (Commands/Skills/Agents/MCP); nur die Pipeline ist gezähmt.
+- **Projekt-lokal** (onboarded): `env.ECC_HOOK_PROFILE=standard` → überschreibt global, volle
+  ECC-Pipeline (quality-gate, console-warn, observe, governance, metrics …) ist hier aktiv.
+- **Warum so:** Das ist der offizielle ECC-Mechanismus (`ECC_HOOK_PROFILE`, Upstream-Default
+  `standard`) — ein Profil-Wort statt 19 IDs. Ersetzt den früheren `ECC_DISABLED_HOOKS`-Listen-Hack.
+- **Onboarded Projekte:** `Claude Code BestPractice`, `Werkstattauftraege_codex`, `Grow3_Automatisierung`,
+  `Test-ECC`, `Verladelisten_Hafen`.
+- **Backup vor Umstellung:** `~/.claude-ecc-migration-backups/<stamp>/` (Stempel in `/tmp/ecc-migration-stamp`).
+- **Wirkung:** env-Änderungen greifen erst in einer **frischen Session**.
 
 ## Schicht-2-Befehle
 
@@ -120,10 +125,10 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 ## Core-Integrität & Attribution
 
-- **ECC-Core byte-identisch zu Upstream 2.0.0-rc.1.** Keine Hand-Edits unter `ecc/`
-  (verifiziert: `git status -- ecc/` sauber). Änderungen am ECC-Verhalten laufen
-  ausschließlich über Schicht 2 — nie durch Patches im Core.
+- **ECC-Core = globales Plugin `ecc@ecc` (Upstream 2.0.0-rc.1), nicht mehr vendored.**
+  Single Source unter `~/.claude/plugins/cache/ecc/`. Änderungen am ECC-Verhalten laufen
+  ausschließlich über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2 — nie durch Patches im Plugin.
 - **Attribution-Policy (Schicht-2-Override):** Co-Authorship ist für dieses Setup **AKTIV**
   (Commits enden mit `Co-Authored-By: …`). Der Upstream-Hinweis „Attribution disabled
-  globally" im vendored Core gilt hier bewusst **nicht** — maßgeblich sind diese Notiz und
+  globally" im Upstream-Plugin gilt hier bewusst **nicht** — maßgeblich sind diese Notiz und
   `bestpractice-extras/rules/attribution-policy.md`.

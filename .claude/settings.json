@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const f=(i.tool_input&&(i.tool_input.file_path||i.tool_input.path))||'';if(/(^|\\/)ecc\\//.test(f)){console.error('[guard] BLOCKIERT: ecc/ ist vendored ECC-Core (Schicht 1) — unberuehrt lassen. Aenderungen ueber bestpractice-extras/ (Schicht 2).');process.exit(2)}process.stdout.write(d)}catch(e){process.stdout.write(d)}})\""
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "matcher": "*",
@@ -46,6 +35,7 @@
     ]
   },
   "env": {
-    "ECC_DISABLED_HOOKS": "pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force"
+    "ECC_HOOK_PROFILE": "standard",
+    "ECC_GATEGUARD": "off"
   }
 }

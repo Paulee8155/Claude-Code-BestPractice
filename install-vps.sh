@@ -1,77 +1,81 @@
 #!/usr/bin/env bash
-# install-vps.sh — Reproduzierbarer, RTK-sicherer VPS-weiter Rollout des fusionierten Harness.
+# install-vps.sh — Reproduzierbarer, RTK-sicherer VPS-weiter Rollout des Harness.
 #
-# Installiert ECC (vendored in ./ecc) global nach ~/.claude (namespace-sicher) und
-# layert die kuratierten BestPractice-Extras (RPI-Workflow + Karpathy-Rule) darüber.
+# OFFIZIELLE ECC-ARCHITEKTUR (Upstream 2.0.0-rc.1):
+#   ECC wird als EIN globales Plugin (ecc@ecc) installiert — NICHT ins Repo vendored,
+#   NICHT per install-apply gestackt. Dieses Skript setzt das installierte Plugin voraus
+#   und (1) verteilt die Rules aus dem Plugin-Cache (Plugins verteilen rules nicht selbst,
+#   README.md:288), (2) layert die BestPractice-Extras (Schicht 2) darüber.
+#
+# Plugin zuerst installieren (einmalig, in Claude Code):
+#   /plugin marketplace add https://github.com/affaan-m/ECC
+#   /plugin install ecc@ecc
 #
 # Sicherheit:
 #   - Fasst settings.json / settings.local.json / CLAUDE.md standardmäßig NICHT an.
 #   - Der globale RTK-Hook (PreToolUse:Bash) bleibt unangetastet.
-#   - ECC-Hooks bleiben INAKTIV (Security-First-Default) — Aktivierung nur manuell.
+#   - Hook-Verhalten wird über ECC_HOOK_PROFILE gesteuert (global minimal, projekt-lokal
+#     standard) — siehe docs/WO-LAEUFT-WAS.md. Dieses Skript ändert keine env-Variablen.
 #   - Optionale Härtung (deny-Baseline) NUR mit --harden, immer mit Backup.
 #
 # Usage:
-#   ./install-vps.sh                 # ECC global (core) + BP-Extras layern
-#   ./install-vps.sh --profile full  # anderes ECC-Profil
+#   ./install-vps.sh                 # Rules aus Plugin-Cache + BP-Extras layern
 #   ./install-vps.sh --harden        # zusätzlich deny-Sicherheitsbasis in settings.json (opt-in)
-#   ./install-vps.sh --dry-run       # nur ECC-Install-Plan anzeigen, nichts schreiben
+#   ./install-vps.sh --dry-run       # nur zeigen, was kopiert würde
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ECC_DIR="$REPO_DIR/ecc"
 EXTRAS_DIR="$REPO_DIR/bestpractice-extras"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+PLUGIN_DIR="${ECC_PLUGIN_DIR:-$CLAUDE_HOME/plugins/cache/ecc/ecc/2.0.0-rc.1}"
 
-PROFILE="core"
 DRY_RUN=0
 HARDEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --profile) PROFILE="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --harden)  HARDEN=1; shift ;;
     *) echo "Unbekannte Option: $1"; exit 1 ;;
   esac
 done
 
-echo "[VPS] Repo:        $REPO_DIR"
-echo "[VPS] ECC-Engine:  $ECC_DIR"
+echo "[VPS] Repo:          $REPO_DIR"
+echo "[VPS] Plugin (Quelle): $PLUGIN_DIR"
 echo "[VPS] Ziel (~/.claude): $CLAUDE_HOME"
-echo "[VPS] Profil:      $PROFILE"
 
-# 1) Deps der vendored ECC sicherstellen
-if [ ! -d "$ECC_DIR/node_modules" ]; then
-  echo "[VPS] Installiere ECC-Dependencies..."
-  (cd "$ECC_DIR" && npm ci --no-audit --no-fund --loglevel=error)
+# 0) Voraussetzung: ECC-Plugin installiert (Single Source — kein Vendoring, kein Stacking)
+if [ ! -d "$PLUGIN_DIR" ]; then
+  echo "[VPS] FEHLER: ECC-Plugin nicht gefunden unter $PLUGIN_DIR" >&2
+  echo "[VPS] Erst installieren (in Claude Code):" >&2
+  echo "[VPS]   /plugin marketplace add https://github.com/affaan-m/ECC" >&2
+  echo "[VPS]   /plugin install ecc@ecc" >&2
+  exit 1
 fi
 
-# 2) ECC global installieren (oder Plan zeigen)
+# 1) Rules aus dem Plugin-Cache nach ~/.claude/rules/ecc (Plugin verteilt rules nicht selbst)
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[VPS] DRY-RUN — ECC-Install-Plan:"
-  (cd "$ECC_DIR" && node scripts/install-apply.js --target claude --profile "$PROFILE" --dry-run)
-  echo "[VPS] DRY-RUN beendet. Keine Änderungen geschrieben."
+  echo "[VPS] DRY-RUN — würde kopieren: $PLUGIN_DIR/rules/ → $CLAUDE_HOME/rules/ecc/"
+  echo "[VPS] DRY-RUN — würde Extras layern (siehe Schritt 2)."
   exit 0
 fi
+echo "[VPS] Verteile Rules aus Plugin-Cache → ~/.claude/rules/ecc ..."
+mkdir -p "$CLAUDE_HOME/rules/ecc"
+cp -R "$PLUGIN_DIR/rules/." "$CLAUDE_HOME/rules/ecc/"
 
-echo "[VPS] Installiere ECC global (namespace-sicher: rules/ecc, skills/ecc, agents, commands)..."
-(cd "$ECC_DIR" && node scripts/install-apply.js --target claude --profile "$PROFILE")
-
-# 3) BestPractice-Extras layern (Karpathy-Rule + ECC-Onboard-Command)
-#    ECC ist führend; RPI/adopt-project entfernt (redundant zu ECC-Workflow + /ecc-onboard).
-echo "[VPS] Layere BestPractice-Extras (Karpathy + /ecc-onboard + /mega-plan)..."
-mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras"
+# 2) BestPractice-Extras layern (Schicht 2: Karpathy + /ecc-onboard + /mega-plan + /start)
+echo "[VPS] Layere BestPractice-Extras..."
+mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras" "$CLAUDE_HOME/agents" "$CLAUDE_HOME/contexts"
 cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/commands/mega-plan.md"         "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/attribution-policy.md"   "$CLAUDE_HOME/rules/ecc-extras/"
-mkdir -p "$CLAUDE_HOME/agents" "$CLAUDE_HOME/contexts"
 cp "$EXTRAS_DIR/agents/rpi-"*.md               "$CLAUDE_HOME/agents/"
 [ "$EXTRAS_DIR/commands/start.md" -ef "$CLAUDE_HOME/commands/start.md" ] || cp "$EXTRAS_DIR/commands/start.md" "$CLAUDE_HOME/commands/"
-if [ -d "$EXTRAS_DIR/contexts" ]; then cp "$EXTRAS_DIR/contexts/"*.md "$CLAUDE_HOME/contexts/"; fi
-echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, /start, karpathy + attribution, rpi-Advisors, dev/review-Kontexte."
+if [ -d "$EXTRAS_DIR/contexts" ]; then cp "$EXTRAS_DIR/contexts/"*.md "$CLAUDE_HOME/contexts/" 2>/dev/null || true; fi
+echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, /start, karpathy + attribution, rpi-Advisors."
 
-# 4) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
+# 3) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
 if [ "$HARDEN" -eq 1 ]; then
   echo "[VPS] --harden: füge deny-Sicherheitsbasis zu settings.json hinzu (mit Backup)..."
   TS="$(date +%Y%m%d-%H%M%S)"
@@ -99,9 +103,4 @@ console.log('[VPS] deny-Baseline gesetzt (' + s.permissions.deny.length + ' Eint
 NODE
 fi
 
-# 5) Health-Check
-echo "[VPS] Health-Check (ecc doctor)..."
-(cd "$ECC_DIR" && node scripts/ecc.js doctor || true)
-
-echo "[VPS] Fertig. ECC ist VPS-weit aktiv. ECC-Hooks bleiben inaktiv bis zur manuellen Aktivierung."
-echo "[VPS] Doku: docs/ECC-Harness-Guide.de.docx / .pptx"
+echo "[VPS] Fertig. Single Source = globales Plugin. Hook-Profil via ECC_HOOK_PROFILE (docs/WO-LAEUFT-WAS.md)."

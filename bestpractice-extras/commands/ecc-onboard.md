@@ -123,22 +123,25 @@ Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settin
    }
    ```
 
-   **ECC-Hooks projekt-lokal reaktivieren** (Schicht-2-Opt-in): Global sind ECC-Lifecycle-Hooks
-   per `~/.claude/settings.json` → `env.ECC_DISABLED_HOOKS` deaktiviert. Damit ein onboarded
-   Projekt die ECC-Quality-Hooks (quality-gate, console-warn, accumulate, observe, governance …)
-   wieder erhält, im **`env`-Block** der Projekt-`settings.json` `ECC_DISABLED_HOOKS` auf **nur die
-   beiden gateguard-IDs** setzen (überschreibt das globale Voll-Disable, gateguard bleibt bewusst aus):
+   **ECC-Hooks projekt-lokal aktivieren** (offizielle Profil-Mechanik): Global steht
+   `~/.claude/settings.json` → `env.ECC_HOOK_PROFILE=minimal` (Nicht-ECC-Projekte zahm).
+   Damit ein onboarded Projekt die volle ECC-Pipeline (quality-gate, console-warn, observe,
+   governance, metrics …) erhält, im **`env`-Block** der Projekt-`settings.json` das Profil auf
+   **`standard`** setzen (überschreibt global; gateguard bleibt via `ECC_GATEGUARD=off` bewusst aus):
 
    ```jsonc
    {
      "env": {
-       "ECC_DISABLED_HOOKS": "pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force"
+       "ECC_HOOK_PROFILE": "standard",
+       "ECC_GATEGUARD": "off"
      }
    }
    ```
 
-   Idempotent mergen: `env` anlegen, falls fehlend; vorhandenen `ECC_DISABLED_HOOKS`-Wert auf den
-   gateguard-Wert setzen. Wirkt erst in einer **frischen Session** (env lädt beim Start).
+   Idempotent mergen: `env` anlegen, falls fehlend; `ECC_HOOK_PROFILE=standard` + `ECC_GATEGUARD=off`
+   setzen. **Kein** `ECC_DISABLED_HOOKS`, **kein** vendored Core, **kein** eigener `hooks.py` —
+   das Plugin liefert die Hooks, das Profil steuert sie. Wirkt erst in einer **frischen Session**.
+   Details: `docs/WO-LAEUFT-WAS.md`.
 
    Liegt `bestpractice-extras/` **nicht** im Zielprojekt (Fremd-Repo), den absoluten Pfad zum
    BestPractice-Repo verwenden:
