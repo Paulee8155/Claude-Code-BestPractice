@@ -58,6 +58,7 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 - **Stop**: format-typecheck · check-console-log · session-end
 - **SessionStart**: session-start-bootstrap
 - **PreCompact**: pre-compact
+- **State-Sync (projekt-lokal, `.claude/settings.json`)**: SessionStart→`state-sync pre`, Stop/PreCompact→`state-sync post` — spiegelt `state/` ⇄ `WORKING-CONTEXT.md` (Schicht 2, ecc/-Guard unberührt)
 
 ## Harness-Architektur
 

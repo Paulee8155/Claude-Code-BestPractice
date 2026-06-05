@@ -64,7 +64,12 @@ mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras"
 cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/commands/mega-plan.md"         "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
-echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, karpathy-principles."
+cp "$EXTRAS_DIR/rules/attribution-policy.md"   "$CLAUDE_HOME/rules/ecc-extras/"
+mkdir -p "$CLAUDE_HOME/agents" "$CLAUDE_HOME/contexts"
+cp "$EXTRAS_DIR/agents/rpi-"*.md               "$CLAUDE_HOME/agents/"
+[ "$EXTRAS_DIR/commands/start.md" -ef "$CLAUDE_HOME/commands/start.md" ] || cp "$EXTRAS_DIR/commands/start.md" "$CLAUDE_HOME/commands/"
+if [ -d "$EXTRAS_DIR/contexts" ]; then cp "$EXTRAS_DIR/contexts/"*.md "$CLAUDE_HOME/contexts/"; fi
+echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, /start, karpathy + attribution, rpi-Advisors, dev/review-Kontexte."
 
 # 4) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
 if [ "$HARDEN" -eq 1 ]; then

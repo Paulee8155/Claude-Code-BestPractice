@@ -717,6 +717,26 @@ Wrapper steuert ECC nur über dessen reguläre Hooks und Slash-Commands.
 | **Idempotent** | Mehrfaches Ausführen schadet nicht — es wird nur ergänzt, nichts doppelt. |
 | **Vendored** | Eine Kopie von ECC liegt fest im Repo (statt als externe Abhängigkeit). |
 
+## 15. Aktivierungs-Status (Stand 2026-06-05)
+
+Das BestPractice-Repo selbst ist jetzt **onboardet** und die Schicht-2-Mechanik ist **scharf**:
+
+- **State-Sync aktiv (Variante A, projekt-lokal):** `.claude/settings.json` enthält additiv
+  `SessionStart→pre`, `Stop→post`, `PreCompact→post` (Aufruf
+  `bestpractice-extras/scripts/state-sync/state-sync.js`). Der `ecc/`-Schreibguard bleibt
+  unberührt. `state/{context,decisions,progress,tasks}.md` ist befüllt (`harvest.js`),
+  `WORKING-CONTEXT.md` wird beim Session-Start aus `state/` gespiegelt.
+- **Globale `ecc-onboard.md`-Drift behoben:** die global installierte Command-Datei war veraltet
+  (6,3 K ohne Schritt 4b/4c); jetzt = Repo-Version (13 K mit State-Sync-Verdrahtung + consumer-scaffold).
+- **Global gelayerte Extras erweitert:** rpi-Advisors (`~/.claude/agents/`), `attribution-policy.md`
+  (`~/.claude/rules/ecc-extras/`), Dynamic-Context-Profile `contexts/{dev,review}.md`
+  (`~/.claude/contexts/`). `install-vps.sh` deployt all das künftig automatisch.
+- **Unberührt:** ECC-Core (`git status -- ecc/` leer), RTK-Hook (`PreToolUse:Bash` global),
+  globale ECC-Lifecycle-Hooks.
+
+> Hinweis: Die Office-Snapshots `ECC-Harness-Guide.de.docx/.pptx` sind noch auf dem vorherigen
+> Stand — bei Bedarf separat aus diesem Markdown (Single Source) nachziehen.
+
 ---
 
 *Dieses Erklärbuch wurde aus einer Live-Analyse deines Repos (6 parallele Recherche-Agenten)
