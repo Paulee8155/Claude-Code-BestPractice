@@ -123,6 +123,23 @@ Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settin
    }
    ```
 
+   **ECC-Hooks projekt-lokal reaktivieren** (Schicht-2-Opt-in): Global sind ECC-Lifecycle-Hooks
+   per `~/.claude/settings.json` → `env.ECC_DISABLED_HOOKS` deaktiviert. Damit ein onboarded
+   Projekt die ECC-Quality-Hooks (quality-gate, console-warn, accumulate, observe, governance …)
+   wieder erhält, im **`env`-Block** der Projekt-`settings.json` `ECC_DISABLED_HOOKS` auf **nur die
+   beiden gateguard-IDs** setzen (überschreibt das globale Voll-Disable, gateguard bleibt bewusst aus):
+
+   ```jsonc
+   {
+     "env": {
+       "ECC_DISABLED_HOOKS": "pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force"
+     }
+   }
+   ```
+
+   Idempotent mergen: `env` anlegen, falls fehlend; vorhandenen `ECC_DISABLED_HOOKS`-Wert auf den
+   gateguard-Wert setzen. Wirkt erst in einer **frischen Session** (env lädt beim Start).
+
    Liegt `bestpractice-extras/` **nicht** im Zielprojekt (Fremd-Repo), den absoluten Pfad zum
    BestPractice-Repo verwenden:
    `node "$EXTRAS/scripts/state-sync/state-sync.js" pre|post --project "$CLAUDE_PROJECT_DIR"`.

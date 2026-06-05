@@ -651,15 +651,15 @@ Zwei Ebenen:
 `ECC-WORKFLOW-GUIDE.de.md`, die drei Leitfäden, der Ordner `docs/` mit Übersetzungen. Bei
 Bedarf manuell aktualisiert. (Dieses Erklärbuch gehört auch dazu.)
 
-**2. Die Begleit-Dokumente (statische Snapshots).** `docs/ECC-Harness-Guide.de.docx` (Word)
-und `docs/ECC-Harness-Guide.de.pptx` (PowerPoint) sind **eingefrorene Momentaufnahmen** für
-die Weitergabe an Nicht-Coder.
-- **Single Source of Truth ist Markdown:** maßgeblich sind dieses Erklärbuch und
-  `docs/MEGA-WORKFLOW.de.md`. Die docx/pptx werden **nicht** live aus dem Repo generiert —
-  ein früherer `build_guide.py`-Generator existiert aktuell **nicht** mehr im Repo.
-- **Aktuell halten:** Inhalte hier im Markdown pflegen. Wenn ein neuer Word-/PPTX-Snapshot
-  gebraucht wird, kann er mit `python-docx` + `python-pptx` aus dem Markdown neu erzeugt
-  werden (Generator bei Bedarf neu aufsetzen).
+**2. Die Begleit-Dokumente (gebaute Snapshots).** `docs/ECC-Harness-Guide.de.docx` (Word)
+und `docs/ECC-Harness-Guide.de.pptx` (PowerPoint) sind Snapshots für die Weitergabe an
+Nicht-Coder — sie haben eine **eigene** Markdown-Quelle: `docs/ECC-Harness-Guide.de.md`.
+- **Single Source ist Markdown:** Der Harness-Guide wird ausschließlich in
+  `docs/ECC-Harness-Guide.de.md` gepflegt; dieses Erklärbuch und `docs/MEGA-WORKFLOW.de.md`
+  sind separate, ebenfalls von Hand gepflegte Markdown-Dokumente.
+- **Reproduzierbar bauen:** `python3 bestpractice-extras/scripts/build-docs/build.py` erzeugt
+  docx + pptx neu aus der md-Quelle (python-docx + python-pptx). Nach jeder Inhaltsänderung an
+  der md einmal laufen lassen — so driften die Snapshots nicht mehr.
 
 ---
 
@@ -734,8 +734,9 @@ Das BestPractice-Repo selbst ist jetzt **onboardet** und die Schicht-2-Mechanik 
 - **Unberührt:** ECC-Core (`git status -- ecc/` leer), RTK-Hook (`PreToolUse:Bash` global),
   globale ECC-Lifecycle-Hooks.
 
-> Hinweis: Die Office-Snapshots `ECC-Harness-Guide.de.docx/.pptx` sind noch auf dem vorherigen
-> Stand — bei Bedarf separat aus diesem Markdown (Single Source) nachziehen.
+> Hinweis: Die Office-Snapshots `ECC-Harness-Guide.de.docx/.pptx` werden aus ihrer eigenen
+> Markdown-Quelle `docs/ECC-Harness-Guide.de.md` gebaut:
+> `python3 bestpractice-extras/scripts/build-docs/build.py` (Stand 2026-06-05 nachgezogen).
 
 ---
 

@@ -52,13 +52,19 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 - [ ] Kein `console.log` in Production-Code
 - [ ] SQL-Injection + XSS verhindert
 
-## Hooks (aktiv)
+## Hooks (projekt-lokales Opt-in — NICHT global)
 
-- **PostToolUse**: quality-gate + accumulator (Edit/Write) · console-warn (Edit)
-- **Stop**: format-typecheck · check-console-log · session-end
-- **SessionStart**: session-start-bootstrap
-- **PreCompact**: pre-compact
+ECC-Lifecycle-Hooks sind **global deaktiviert** über `~/.claude/settings.json` →
+`env.ECC_DISABLED_HOOKS` (alle FLAGGED-IDs). Projekte aktivieren sie **bewusst** projekt-lokal,
+indem `.claude/settings.json` → `env.ECC_DISABLED_HOOKS` global überschreibt (nur die 2
+gateguard-IDs gesetzt → der Rest re-aktiviert). `/ecc-onboard` macht das automatisch.
+
+- **In ECC-Projekten aktiv** (via env-Override): quality-gate + accumulator + console-warn
+  (PostToolUse) · observe/governance/metrics · pre:compact — alle FLAGGED-Hooks aus dem Plugin.
+- **DIRECT-Hooks** (Stop: format-typecheck · check-console-log · session-end): nicht env-gatebar,
+  laufen überall, no-oppen sich aber selbst ohne relevante Arbeit (kein Formatter / keine Edits).
 - **State-Sync (projekt-lokal, `.claude/settings.json`)**: SessionStart→`state-sync pre`, Stop/PreCompact→`state-sync post` — spiegelt `state/` ⇄ `WORKING-CONTEXT.md` (Schicht 2, ecc/-Guard unberührt)
+- **Wirkung:** env-Änderungen greifen erst in einer **frischen Session**.
 
 ## Harness-Architektur
 
@@ -79,11 +85,17 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 - **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js` → Repo-Integrität.
 - **Modell:** Opus 4.8 (1M) Standard; `/model-route` vor mehrdeutigen/architektonischen Aufgaben.
 
-## Hooks (verifiziert aktiv über Plugin)
+## Hook-Scope (global aus, projekt-lokal an)
 
-- `post:quality-gate` (PostToolUse) — aktiv, nicht in `ECC_DISABLED_HOOKS`.
-- `stop:format-typecheck`, `stop:session-end` — aktiv über Plugin (globales `Stop: []` unterdrückt sie nicht).
-- Deaktiviert (bewusst): `pre:bash:gateguard-fact-force`, `pre:edit-write:gateguard-fact-force`.
+- **Global** (`~/.claude/settings.json`): `env.ECC_DISABLED_HOOKS` = **alle 18 FLAGGED-IDs + gateguard**
+  → ECC-Plugin-Hooks feuern in Nicht-ECC-Projekten nicht. Plugin selbst bleibt `enabledPlugins: true`
+  (Commands/Skills/Agents/MCP überall verfügbar; nur die Hooks sind stillgelegt).
+- **Projekt-lokal** (onboarded): `env.ECC_DISABLED_HOOKS` = **nur die 2 gateguard-IDs** → überschreibt
+  global, die 18 FLAGGED-Hooks (quality-gate, console-warn, accumulate, observe, governance, metrics,
+  pre:compact …) sind dort wieder aktiv. Gateguard bleibt bewusst aus.
+- **Onboarded Projekte mit Override:** `Claude Code BestPractice`, `Test-ECC`, `Verladelisten_Hafen`.
+- **Backup vor Umstellung:** `~/.claude/settings.json.bak-<stamp>` + Projekt-Backups (Stempel in
+  `/tmp/ecc-migration-stamp`).
 
 ## Schicht-2-Befehle
 
@@ -100,6 +112,11 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
   (Outbound) — bewusst manuell. Details: `bestpractice-extras/scripts/mgrep/README.md`.
 - **LSP-Plugins** `typescript-lsp` + `pyright-lsp` (user-scoped installiert) — Echtzeit-
   Typecheck & go-to-definition im Terminal ohne IDE.
+- **Doku-Build** (`bestpractice-extras/scripts/build-docs/build.py`): baut die Office-Snapshots
+  `docs/ECC-Harness-Guide.de.{docx,pptx}` reproduzierbar aus der Single-Source-Markdown
+  `docs/ECC-Harness-Guide.de.md` (python-docx + python-pptx). **Single Source ist die `.md`** —
+  nach jeder Inhaltsänderung `python3 bestpractice-extras/scripts/build-docs/build.py` laufen
+  lassen, docx/pptx nie von Hand editieren. Details: `bestpractice-extras/scripts/build-docs/README.md`.
 
 ## Core-Integrität & Attribution
 
