@@ -23,15 +23,16 @@ und `/adopt-project`-(nur Templates) Einzelschritte als einen kompletten Setup-B
 ## Feste Pfade (VPS srv1051228)
 
 ```bash
-ECC_REPO="/root/projekte/Claude Code BestPractice/ecc"
+ECC_REPO="/root/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1"    # globales Plugin ecc@ecc (nicht mehr vendored)
 EXTRAS="/root/projekte/Claude Code BestPractice/bestpractice-extras"
 TEMPLATES="$EXTRAS/templates"
 STACK_MAP="$ECC_REPO/config/project-stack-mappings.json"
 STACK_MAP_EXTRA="$EXTRAS/config/stack-mappings-extra.json"   # Schicht-2-Overlay (weitere Stacks)
 HARVEST="$EXTRAS/scripts/context-harvest/harvest.js"          # deterministische Auto-Kontext-Generierung
-AUDIT="/root/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js"  # Baseline-/Verify-Audit
+AUDIT="$ECC_REPO/scripts/harness-audit.js"                    # Baseline-/Verify-Audit
 ```
-Wenn `ECC_REPO` nicht existiert, abbrechen und den User bitten, das BestPractice-Repo zu prüfen.
+Wenn `ECC_REPO` nicht existiert, abbrechen — das Plugin `ecc@ecc` ist nicht installiert
+(mit `/plugin` prüfen/installieren).
 
 ## Sicherheitsregeln
 
@@ -42,7 +43,7 @@ Wenn `ECC_REPO` nicht existiert, abbrechen und den User bitten, das BestPractice
 4. **Keine Platzhalter** in PROJECT_RULES.md/state — nur verifizierte Fakten aus dem echten Code.
 5. **Keine Builds/Tests/Installs** ausführen, nur lesen (`Glob`/`Read`) und den ECC-Installer aufrufen.
 6. **ECC-Core unangetastet.** State-Sync wird rein **additiv** in der projekt-lokalen
-   `.claude/settings.json` registriert — niemals eine Datei unter `ecc/` editieren.
+   `.claude/settings.json` registriert — niemals eine Datei im Plugin-Cache (`$ECC_REPO`) editieren.
 
 ## Ablauf
 
@@ -168,14 +169,18 @@ schließt die Lücke — idempotent und additiv (überschreibt nie bestehende Us
 
 ```bash
 node "$EXTRAS/scripts/onboard/consumer-scaffold.js" --project "<ZIELPROJEKT-ROOT>"
-# --dry-run zeigt nur an; --ecc-repo <pfad> überschreibt die .mcp.json-Quelle
+# --dry-run zeigt nur an, schreibt nichts
 ```
 
 Legt an (nur falls fehlend) und deckt damit diese Audit-Checks:
 - `.claude/memory.md` → **consumer-memory-notes**
 - `SECURITY.md` → **consumer-security-policy**
-- `.mcp.json` (kopiert aus `$ECC_REPO/.mcp.json`) → **consumer-project-config**
 - `.gitignore`-Secret-Block (`.env`, `*.pem`, …) → **consumer-secret-hygiene**
+
+> **Keine projekt-lokale `.mcp.json`.** Der Audit-Check **consumer-project-config** akzeptiert
+> `.mcp.json` **oder** `.claude/settings.json` (Schritt 4b legt Letztere ohnehin an). Das Plugin
+> `ecc@ecc` liefert die MCP-Server bereits **global** — eine Projekt-`.mcp.json` mit denselben
+> Servern würde sie doppelt starten (doppelte Tools = Token-Verschwendung). Daher bewusst nicht kopiert.
 
 **Modell-Override (ECC-Matrix: Security-kritisch → Opus):** patcht das project-level
 `.claude/agents/security-reviewer.md` von `model: sonnet` auf `opus`. **Muss nach Schritt 4

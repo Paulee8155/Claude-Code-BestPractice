@@ -10,15 +10,19 @@
  * Anlegen (nur falls fehlend):
  *   - .claude/memory.md   → consumer-memory-notes (durable notes)
  *   - SECURITY.md         → consumer-security-policy
- *   - .mcp.json           → consumer-project-config (kopiert aus ecc/.mcp.json)
  *   - .gitignore          → consumer-secret-hygiene (hängt Secret-Block an, falls `.env` fehlt)
+ *
+ * Bewusst KEINE projekt-lokale .mcp.json: Der Audit-Check consumer-project-config akzeptiert
+ * `.mcp.json` ODER `.claude/settings.json` (Onboarding legt Letztere ohnehin an). Das Plugin
+ * ecc@ecc liefert die MCP-Server bereits global — eine Projekt-.mcp.json mit denselben Servern
+ * würde sie doppelt starten (doppelte Tools = Token-Verschwendung).
  *
  * Modell-Override (Schicht-2, nach managed Apply):
  *   - .claude/agents/security-reviewer.md: model: sonnet → opus
  *     (ECC-Matrix: Security-kritisch → Opus; der managed Core-Default ist sonnet)
  *
  * Aufruf:
- *   node consumer-scaffold.js --project <ZIELPROJEKT-ROOT> [--ecc-repo <pfad>] [--dry-run]
+ *   node consumer-scaffold.js --project <ZIELPROJEKT-ROOT> [--dry-run]
  *
  * Exit 0 auch bei Teilfehlern (Onboarding nie blockieren); Probleme nach stderr.
  */
@@ -29,19 +33,13 @@ const fs = require('fs');
 const path = require('path');
 
 function parseArgs(argv) {
-  const args = { project: process.cwd(), eccRepo: null, dryRun: false };
+  const args = { project: process.cwd(), dryRun: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--project') args.project = argv[++i] || args.project;
-    else if (a === '--ecc-repo') args.eccRepo = argv[++i] || args.eccRepo;
     else if (a === '--dry-run') args.dryRun = true;
   }
   return args;
-}
-
-// Standard-ECC-Repo relativ zu diesem Script: scripts/onboard/ -> bestpractice-extras/ -> Repo-Root -> ecc/
-function defaultEccRepo() {
-  return path.resolve(__dirname, '..', '..', '..', 'ecc');
 }
 
 function log(msg) { process.stdout.write(`[consumer-scaffold] ${msg}\n`); }
@@ -126,16 +124,6 @@ function ensureGitignoreSecrets(projectRoot, dryRun, results) {
   results.created.push('.gitignore (secret patterns)');
 }
 
-function ensureMcpJson(projectRoot, eccRepo, dryRun, results) {
-  const dest = path.join(projectRoot, '.mcp.json');
-  if (fs.existsSync(dest)) { results.skipped.push('.mcp.json'); return; }
-  const src = path.join(eccRepo, '.mcp.json');
-  if (!fs.existsSync(src)) { warn(`.mcp.json-Quelle fehlt: ${src}`); return; }
-  if (dryRun) { results.wouldCreate.push('.mcp.json'); return; }
-  fs.copyFileSync(src, dest);
-  results.created.push('.mcp.json');
-}
-
 // Patcht das managed project-level security-reviewer.md auf Opus (idempotent).
 // Muss NACH dem managed install-apply laufen, da der Re-Sync sonst auf sonnet zurücksetzt.
 function patchSecurityReviewerModel(projectRoot, dryRun, results) {
@@ -160,7 +148,6 @@ function patchSecurityReviewerModel(projectRoot, dryRun, results) {
 function main() {
   const args = parseArgs(process.argv);
   const projectRoot = path.resolve(args.project);
-  const eccRepo = args.eccRepo ? path.resolve(args.eccRepo) : defaultEccRepo();
 
   if (!fs.existsSync(projectRoot)) { warn(`Projekt-Root fehlt: ${projectRoot}`); process.exit(0); }
   const projectName = path.basename(projectRoot);
@@ -168,7 +155,6 @@ function main() {
 
   ensureFile(path.join(projectRoot, '.claude', 'memory.md'), memoryStub(projectName), args.dryRun, results, '.claude/memory.md');
   ensureFile(path.join(projectRoot, 'SECURITY.md'), securityStub(projectName), args.dryRun, results, 'SECURITY.md');
-  ensureMcpJson(projectRoot, eccRepo, args.dryRun, results);
   ensureGitignoreSecrets(projectRoot, args.dryRun, results);
   patchSecurityReviewerModel(projectRoot, args.dryRun, results);
 
