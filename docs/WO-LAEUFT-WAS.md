@@ -4,7 +4,9 @@
 > Richtet sich nach der **offiziellen ECC-Architektur** (Gründer Affaan Mustafa, Upstream `2.0.0-rc.1`):
 > **ein globales Plugin + Steuerung über Env-Vars**. Lokale Schicht-2-Erweiterungen sind als solche markiert.
 >
-> Stand: 2026-06-05. Migration läuft — siehe Status-Spalten.
+> Stand: 2026-06-10. **Migration abgeschlossen** (Plugin-only-Umbau): alle ECC-Duplikate im Home
+> entfernt, claude-mem + superpowers deaktiviert (ECC führend), ECC-Repo-Klon gelöscht.
+> Backup: `/root/harness-backup-20260610/`.
 
 ---
 
@@ -28,9 +30,14 @@
 |---|---|---|---|
 | **ECC-Plugin** (Core: Agents, Skills, Commands, Hooks) | `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` | **Single Source** des ECC-Verhaltens | ✅ aktiv |
 | **Globale Settings** | `~/.claude/settings.json` | `env.ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off` → zähmt Hooks in Nicht-ECC-Projekten | ✅ umgestellt (2026-06-05) |
-| **ECC-Rules** | `~/.claude/rules/ecc/` | Coding-Standards (Plugin verteilt Rules nicht automatisch → manuell, `README.md:288`) | ✅ vorhanden |
+| **ECC-Rules global** | ~~`~/.claude/rules/ecc/`~~ | **ENTFERNT 2026-06-10** — 117 Dateien aller Sprachen wurden in **jede** Session injiziert (~Auto-Compact-Ursache). Rules kommen jetzt nur projekt-lokal für die relevante Sprache (`/ecc-onboard`) | ✅ entfernt |
+| **Eigene Rules** | `~/.claude/rules/ecc-extras/` | karpathy-principles + attribution-policy (Schicht 2) | ✅ bleibt |
+| **Globale Commands** | `~/.claude/commands/` | **nur noch 3 Symlinks** auf Schicht-2-Quellen: `start`, `mega-plan`, `ecc-onboard`. Die 79 ECC-Command-Kopien sind ENTFERNT (Plugin liefert sie) | ✅ entschlackt |
+| **Hooks-Kopie** | ~~`~/.claude/hooks/`~~ | **ENTFERNT 2026-06-10** — tote 48K-Kopie der Plugin-Hooks, wurde nirgends geladen | ✅ entfernt |
+| **Skills-Kopie** | ~~`~/.claude/skills/ecc/`~~ | **ENTFERNT 2026-06-10** — `skills/learned` + `skills/system-architektur` bleiben | ✅ entfernt |
+| **Plugins deaktiviert** | `settings.json` → `enabledPlugins` | `claude-mem` (ECC-Memory führend), `superpowers` (ECC-Workflow führend), `context7@official` (ECC bringt eigenes context7-MCP) → `false`; Caches bleiben 1–2 Wochen als Rollback | ✅ 2026-06-10 |
 | **Secret** (mgrep) | `~/.claude/settings.json` → `env.MXBAI_API_KEY` | user-scoped, **nie ins Repo** | ✅ |
-| **Migration-Backups** | `~/.claude-ecc-migration-backups/<stamp>/` | Rollback aller settings.json | ✅ 2026-06-05-150744 |
+| **Migration-Backups** | `~/.claude-ecc-migration-backups/<stamp>/` + `/root/harness-backup-20260610/` | Rollback (settings, rules, commands, skills, hooks, claude-mem-Daten, homunculus, Projekt-.claude, eigene Arbeit aus ECC-Klon: voice-orchestrator + ECC-WORKFLOW-GUIDE.de.md) | ✅ |
 
 **Audit-Pin (ersetzt das vendored `ecc/`):** Plugin-Version **`2.0.0-rc.1`**. Audit läuft gegen das globale Plugin:
 `node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js`.
@@ -88,24 +95,36 @@ Liegen in `bestpractice-extras/` — **additive Wrapper**, kein Patch am Core:
 
 ## 6. Projekt-Status (Migration auf den Standard)
 
-| Projekt | Onboarded | Hook-Weg Ist | Ziel | Status |
-|---|---|---|---|---|
-| Grow3_Automatisierung | ✅ | env-Override (gateguard-IDs) | `ECC_HOOK_PROFILE=standard` | ⏳ Phase 4 |
-| Werkstattauftraege_codex | ✅ | **eigener hooks.py** (kein Plugin) | hooks.py raus, `ECC_HOOK_PROFILE=standard` | ⏳ Phase 4 |
-| Verladelisten_Hafen | ✅ | env-Override | `ECC_HOOK_PROFILE=standard` | ⏳ Phase 4 |
-| Test-ECC | ✅ | env-Override | `ECC_HOOK_PROFILE=standard` | ⏳ Phase 4 |
-| Claude Code BestPractice | ✅ (Repo selbst) | env-Override + vendored ecc/ | ecc/ raus, `ECC_HOOK_PROFILE=standard` | ⏳ Phase 3+4 |
-| WMS, Jarvis, n8n, LinkedBoost … | ❌ (bewusst) | global `minimal` | bleibt zahm | ✅ |
+| Projekt | Onboarded | Hook-Weg | Status |
+|---|---|---|---|
+| Grow3_Automatisierung | ✅ | `ECC_HOOK_PROFILE=standard` | ✅ fertig |
+| Werkstattauftraege_codex (+prod/staging) | ✅ | `standard`; hooks.py-Eigenbau **entfernt 2026-06-10** | ✅ fertig |
+| Verladelisten_Hafen | ✅ | `ECC_HOOK_PROFILE=standard` | ✅ fertig |
+| Test-ECC | ✅ | `ECC_HOOK_PROFILE=standard` — **Testbed** für End-to-End-Verifikation | ✅ fertig |
+| WMS_Test | ✅ | `standard` gesetzt, hooks.py entfernt, PROJECT_RULES.md ergänzt (alles 2026-06-10) | ✅ fertig |
+| Claude Code BestPractice | ✅ (Repo selbst) | `ECC_HOOK_PROFILE=standard` | ✅ fertig |
+| WMS_Live, Jarvis, n8n, LinkedBoost … | ❌ (bewusst) | global `minimal` | ✅ bleibt zahm |
+| ~~/root/projekte/ECC~~ (Repo-Klon, 213M) | — | **GELÖSCHT 2026-06-10** — Plugin ist Single Source; eigene Arbeit (voice-orchestrator, ECC-WORKFLOW-GUIDE.de.md) gerettet nach `/root/harness-backup-20260610/ecc-clone-eigenes/` | ✅ |
+
+**Hook-Quellen nach dem Umbau (vollständige Liste):**
+
+| Quelle | Hooks |
+|---|---|
+| `~/.claude/settings.json` | PreToolUse `rtk hook claude` (Token-Optimierung) — sonst nichts |
+| ECC-Plugin (`ecc@ecc`) | alle 28 Lifecycle-Hooks, profilgesteuert via `ECC_HOOK_PROFILE` (inkl. `pre:/post:observe` = Continuous Learning bei `standard`/`strict`) |
+| Projekt-`settings.json` (onboarded) | state-sync (SessionStart/Stop/PreCompact, Schicht 2) |
 
 ---
 
 ## 7. Rollback
 
 ```bash
-# Globale Settings zurück:
+# Kompletter Stand VOR dem Plugin-only-Umbau (2026-06-10):
+tar xzf /root/harness-backup-20260610/claude-global.tgz -C /root      # rules, commands, skills, hooks, settings, CLAUDE.md
+tar xzf /root/harness-backup-20260610/proj-<Projekt>.tgz -C /root/projekte/<Projekt>   # Projekt-.claude
+# claude-mem reaktivieren: settings.json → enabledPlugins."claude-mem@thedotmack": true
+# Ältere Migration (2026-06-05):
 cp /root/.claude-ecc-migration-backups/20260605-150744/global-settings.json /root/.claude/settings.json
-# Projekt-Settings zurück (Beispiel):
-cp /root/.claude-ecc-migration-backups/20260605-150744/<Projekt>-settings.json <projekt>/.claude/settings.json
 ```
 
 Wirkung greift jeweils erst in einer **frischen Session**.

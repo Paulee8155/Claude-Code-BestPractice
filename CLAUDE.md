@@ -5,13 +5,13 @@
 
 ## Pflicht-Workflow (ECC 5-Phasen — jede Aufgabe > 30 Min)
 
-1. **RESEARCH** — Explore-Agent / `gh search code` / claude-mem BEVOR neuer Code
+1. **RESEARCH** — Explore-Agent / `gh search code` / ECC-Memory+Instincts BEVOR neuer Code
 2. **PLAN** — `/plan` aufrufen, auf OK warten. Ohne OK: kein Code.
 3. **IMPLEMENT** — `/feature-dev` + TDD: Tests ZUERST (RED → GREEN → REFACTOR)
 4. **REVIEW** — `/code-review` + sprachspezifisch (`/typescript-reviewer` etc.)
 5. **VERIFY** — Tests + Build grün. Erst dann fertig melden.
 
-Bug → `/systematic-debugging` BEVOR Fix. Nie drauflos coden.
+Bug → reproduzieren + failing Test (`ecc:tdd-workflow`) BEVOR Fix. Nie drauflos coden.
 
 ## Modell-Matrix (Guides von @affaanmustafa)
 
@@ -29,7 +29,7 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 |---|---|
 | Neue Aufgabe > 30 Min | `/plan` (wartet auf OK!) |
 | Feature umsetzen | `/feature-dev` |
-| Bug | `/systematic-debugging` |
+| Bug | reproduzieren + failing Test (`ecc:tdd-workflow`) |
 | Code geschrieben | `/code-review` |
 | Build rot | `/build-fix` |
 | Session-Ende | `/save-session` |

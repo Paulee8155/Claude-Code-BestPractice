@@ -1,5 +1,5 @@
 ---
-description: Tagesstart in einem Befehl — frischer Kontext aus state/ (State-Sync PRE), claude-mem-Hinweis, rtk-Budget, optionales Session-Resume, heutige Now/Next-Agenda und GENAU EIN empfohlener ECC-Folgebefehl. Additiver Schicht-2-Wrapper, ECC-Core unberührt.
+description: Tagesstart in einem Befehl — frischer Kontext aus state/ (State-Sync PRE), ECC-Memory-Hinweis, rtk-Budget, optionales Session-Resume, heutige Now/Next-Agenda und GENAU EIN empfohlener ECC-Folgebefehl. Additiver Schicht-2-Wrapper, ECC-Core unberührt.
 ---
 
 # /start
@@ -48,9 +48,10 @@ Erzeugt/aktualisiert `WORKING-CONTEXT.md` **idempotent** aus `state/` (STATE-Zon
 gespiegelt, SYNC-Inbox + Mensch-Inhalt bewahrt). Sicher mehrfach aufrufbar. Erwartete Ausgabe:
 `[state-sync] PRE ok: WORKING-CONTEXT.md aus state/ generiert`.
 
-### Schritt 2 — claude-mem (Cross-Session-Gedächtnis)
-Darauf hinweisen, dass claude-mem ab der 2. Session je Projekt relevanten Kontext **automatisch**
-injiziert. Gezieltes Nachschlagen anbieten über die Skill `claude-mem:mem-search`, z.B.:
+### Schritt 2 — ECC-Memory (Cross-Session-Gedächtnis)
+Darauf hinweisen, dass ECC Session-Kontext über den SessionStart-Hook lädt und gelernte Muster
+in Instincts persistiert. Gezieltes Nachschlagen anbieten über das ECC memory-MCP
+(`search_nodes` / `read_graph`) oder `/instinct-status`, z.B.:
 „Woran haben wir zuletzt gearbeitet?" / „Gibt es offene Punkte aus der letzten Session?"
 Nur anbieten, nicht erzwingen.
 
@@ -83,7 +84,7 @@ bestätigt (entspricht „PLAN wartet auf OK"). Das ist der **2. Befehl** der Vi
 | vage/vielschichtig, echte Trade-offs | `/mega-plan <Ziel>` |
 | klar umrissene, planbedürftige Aufgabe | `/plan` |
 | konkretes Feature, Plan steht | `/feature-dev` |
-| Bug / unerwartetes Verhalten | `/systematic-debugging` (superpowers) |
+| Bug / unerwartetes Verhalten | Ursache reproduzieren, failing Test zuerst (`ecc:tdd-workflow`), dann Fix |
 | nur kleine, klare Änderung | direkt umsetzen + `/code-review` |
 
 Nichts automatisch starten — die Empfehlung als Vorschlag formulieren und auf das OK warten.

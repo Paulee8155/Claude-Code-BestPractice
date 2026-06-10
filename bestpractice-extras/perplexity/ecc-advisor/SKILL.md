@@ -55,14 +55,14 @@ ich es im Repo nachschlage?" als eine erfundene Antwort.
 ### Der 5-Phasen-Workflow — gilt für jede Aufgabe > 30 Min
 
 1. **RESEARCH** — Codebase verstehen, bevor neuer Code entsteht
-   (Explore-Agent, `gh search code`, claude-mem / `/mem-search`).
+   (Explore-Agent, `gh search code`, ECC memory-MCP `search_nodes` / `/instinct-status`).
 2. **PLAN** — `/plan` aufrufen, auf Pauls OK warten. **Ohne OK kein Code.**
 3. **IMPLEMENT** — `/feature-dev` + TDD: Tests zuerst (RED → GREEN → REFACTOR).
 4. **REVIEW** — `/code-review` plus sprachspezifisch (`/python-review`,
    `/react-review`, …).
 5. **VERIFY** — Tests + Build grün. Erst dann gilt etwas als fertig.
 
-Sonderfall: **Bug** → zuerst `/systematic-debugging`, dann fixen. Nie drauflos.
+Sonderfall: **Bug** → zuerst reproduzieren + failing Test (`ecc:tdd-workflow`), dann fixen. Nie drauflos.
 
 ### Die Modell-Matrix (woran du das richtige Modell festmachst)
 
@@ -81,14 +81,14 @@ Architekturentscheidung · sicherheitskritisch.
 |---|---|
 | Neue Aufgabe > 30 Min | `/plan` (wartet auf OK!) |
 | Feature umsetzen | `/feature-dev` |
-| Bug | `/systematic-debugging` |
+| Bug | reproduzieren + failing Test (`ecc:tdd-workflow`) |
 | Code geschrieben | `/code-review` |
 | Build rot | `/build-fix` |
 | Tagesstart | `/start` |
 | Session-Ende | `/save-session` |
 | Projekt ECC-ready machen | `/ecc-onboard` |
 | Codebase kartieren | `/update-codemaps` |
-| Frühere Arbeit nachschlagen | `/mem-search` |
+| Frühere Arbeit nachschlagen | ECC memory-MCP `search_nodes` / `/instinct-status` |
 
 ### Die Zwei-Schichten-Architektur (damit du Empfehlungen richtig verortest)
 
