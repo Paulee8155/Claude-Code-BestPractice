@@ -206,13 +206,26 @@ function resolveProjectRoot(argv) {
   return process.cwd();
 }
 
-/** No-op-Guard: gibt es ein `state/`-Verzeichnis im Root? */
+/** Sentinel-Datei, die ein `state/` ausdruecklich als ECC-verwaltet markiert. */
+const MANAGED_SENTINEL = path.join('state', '.ecc-managed');
+
+/**
+ * No-op-Guard: Ist dies ein ECC-verwaltetes Projekt? Wahr, wenn `state/` ein
+ * Verzeichnis ist UND entweder das Sentinel `state/.ecc-managed` existiert ODER
+ * alle vier STATE_FILES vorliegen. So loest ein zufaelliges `state/` aus anderem
+ * Kontext (z.B. Terraform-`state/`, ML-Checkpoints) keinen false-positive aus —
+ * relevant, seit der state-sync-Hook GLOBAL feuert (greift sonst in Fremd-Repos).
+ * Rueckwaertskompatibel: bereits onboardete Projekte haben die vier Dateien.
+ */
 function hasStateDir(root) {
+  const stateDir = path.join(root, 'state');
   try {
-    return fs.statSync(path.join(root, 'state')).isDirectory();
+    if (!fs.statSync(stateDir).isDirectory()) return false;
   } catch {
     return false;
   }
+  if (fs.existsSync(path.join(root, MANAGED_SENTINEL))) return true;
+  return STATE_FILES.every((n) => fs.existsSync(path.join(stateDir, `${n}.md`)));
 }
 
 /**
@@ -231,6 +244,7 @@ module.exports = {
   WORKING_CONTEXT,
   SYNC_DIR,
   SNAPSHOT_FILE,
+  MANAGED_SENTINEL,
   stateMarker,
   syncMarker,
   readFileSafe,

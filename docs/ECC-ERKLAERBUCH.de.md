@@ -5,9 +5,11 @@
 > welche Agenten / Skills / Commands / Hooks existieren, wie alles zusammenhängt und was
 > passiert, wenn du das System in einem neuen Projekt einrichtest.
 >
-> **Stand:** 2026-06-03 · synchron mit Upstream `affaan-m/ecc` (63 Agenten, 249 Skills,
-> 79 Commands, 29 Hooks) — plus deine eigenen Erweiterungen (Schicht 2) und das
-> Schicht-2-Tooling (mgrep semantische Suche, LSP-Plugins).
+> **Stand:** 2026-06-10 · ECC läuft als **globales Plugin** `ecc@ecc` 2.0.0-rc.1 (gepinnt
+> auf Upstream `affaan-m/ECC`, 63 Agenten, 249 Skills, 79 Commands, 29 Hooks) — plus deine
+> eigenen Erweiterungen (Schicht 2) und das Schicht-2-Tooling (mgrep, LSP-Plugins).
+> Seit der **Plugin-only-Migration (2026-06-10)** gibt es keine vendored `ecc/`-Kopie mehr;
+> claude-mem und superpowers sind deaktiviert — ECC ist die einzige führende Mechanik.
 
 ---
 
@@ -27,6 +29,8 @@
 12. [Wie Dokumentation entsteht](#12-wie-dokumentation-entsteht)
 13. [End-to-End: Von Null auf fertiges Feature](#13-end-to-end)
 14. [Glossar für Nicht-Coder](#14-glossar)
+15. [Aktivierungs-Status (Stand 2026-06-10)](#15-aktivierungs-status-stand-2026-06-10)
+16. [Wie du ECC jetzt wirklich benutzt — Praxis-Leitfaden](#16-praxis-leitfaden)
 
 ---
 
@@ -44,22 +48,28 @@ Dein System besteht aus **drei sauber getrennten Schichten**:
 │  SCHICHT 3 — Deine globale Config                            │
 │  ~/.claude/CLAUDE.md, ~/.claude/settings.json               │
 │  → Modell-Strategie, Token-Budget, Karpathy-Prinzipien,     │
-│    welche Plugins/Hooks an sind                             │
+│    welche Plugins an sind, ECC_HOOK_PROFILE                 │
 ├─────────────────────────────────────────────────────────────┤
 │  SCHICHT 2 — BestPractice-Wrapper (DEIN Eigenbau)           │
 │  bestpractice-extras/, docs/MEGA-WORKFLOW.de.md             │
 │  → RPI-Berater, /mega-plan, State-Sync-Adapter             │
 │  → steuert ECC nur über dessen reguläre Schnittstellen     │
 ├─────────────────────────────────────────────────────────────┤
-│  SCHICHT 1 — ECC-Core (Upstream, NIE verändert)            │
-│  ecc/  → 63 Agenten · 249 Skills · 79 Commands · 29 Hooks  │
+│  SCHICHT 1 — ECC-Core (globales Plugin, NIE verändert)     │
+│  ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/               │
+│  → 63 Agenten · 249 Skills · 79 Commands · 29 Hooks        │
+│  → + 6 mitgebrachte MCP-Server (memory, context7, github,  │
+│    exa, playwright, sequential-thinking)                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Die goldene Regel deines Setups:** Schicht 1 (`ecc/`) wird **niemals** angefasst. Alle
-deine Eigenbauten leben in Schicht 2 und docken nur über ECCs offizielle Schnittstellen
-(Hooks, Slash-Commands) an. Dadurch kannst du ECC jederzeit auf den neuesten Upstream-Stand
-heben, ohne deine eigenen Erweiterungen zu verlieren.
+**Die goldene Regel deines Setups:** Schicht 1 (das Plugin) wird **niemals** angefasst.
+Seit der Plugin-only-Migration (2026-06-10) gibt es keine vendored `ecc/`-Kopie im Repo
+mehr — ECC lebt ausschließlich als globales Plugin `ecc@ecc`, gepinnt auf den Upstream-Tag
+`v2.0.0-rc.1` (GitHub `affaan-m/ECC`). Verhalten änderst du nur über Env-Vars
+(`ECC_HOOK_PROFILE`, `ECC_GATEGUARD`) und Schicht 2. Dadurch kannst du ECC jederzeit auf
+einen neueren Upstream-Tag heben (Eintrag in `~/.claude/settings.json` →
+`extraKnownMarketplaces.ecc.source.ref` ändern), ohne deine Erweiterungen zu verlieren.
 
 ---
 
@@ -129,7 +139,9 @@ Wenn du nur 5 Minuten hast — das ist die ungenutzte Power, die du sofort abruf
 
 ## 4. Die Repo-Struktur
 
-Das ECC-Repo (`ecc/`) ist ein Werkzeugkasten — jeder Ordner hat eine klare Aufgabe.
+Der ECC-Werkzeugkasten liegt seit der Migration unter
+`~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` (globales Plugin, read-only behandeln).
+Jeder Ordner hat eine klare Aufgabe.
 
 | Ordner | Was drin ist und wofür |
 |---|---|
@@ -174,7 +186,9 @@ ECC ist das **führende Harness**. Der Kern ist eine **5-Phasen-Pipeline**. Wich
 | **5. VERIFY** | Tests + Build müssen grün sein. Bei Fehlern zurück zu Phase 3. | `/build-fix`, `quality-gate`, `checkpoint` |
 
 **Quer dazu:**
-- **Bug** → erst `/systematic-debugging` (superpowers), nie blind einen Fix raushauen.
+- **Bug** → erst reproduzieren + failing Test schreiben (`ecc:tdd-workflow`), nie blind
+  einen Fix raushauen. (Das frühere `/systematic-debugging` stammte aus superpowers —
+  dieses Plugin ist seit 2026-06-10 deaktiviert.)
 - **Neues/bestehendes Projekt** → `/ecc-onboard` (Stack-Detection + Setup).
 - **Continuous Learning** → `/learn-eval`, `/promote` für bewährte Muster.
 
@@ -402,8 +416,9 @@ selbst aktiviert.
 | 17 | API Connectors & Integrationen | ~4 | `api-connector-builder`, `jira-integration`, `x-api` |
 | 18 | Sonstige Fachbereiche | ~10 | `recursive-decision-ledger`, `iterative-retrieval`, `parallel-execution-optimizer`, `search-first` |
 
-> Die vollständige Skill-Liste mit Einzel-Beschreibungen liegt im Repo unter
-> `ecc/skills/<name>/SKILL.md`. Per `/ecc-guide` oder `skill-scout` durchsuchbar.
+> Die vollständige Skill-Liste mit Einzel-Beschreibungen liegt im Plugin unter
+> `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/skills/<name>/SKILL.md`.
+> Per `/ecc-guide` oder `skill-scout` durchsuchbar.
 
 > **Die 12 wertvollsten Skills** sind oben im [Schnellstart](#3-schnellstart) gelistet.
 
@@ -485,20 +500,26 @@ Jeder Hook trägt eine Liste von Profilen, in denen er laufen darf:
 - **standard** — **Default**: das volle Qualitäts- & Lern-Sicherheitsnetz.
 - **strict** — alles aus standard **plus** strengere Erinnerungen.
 
-Gesteuert über drei Umgebungs-Variablen (in `~/.claude/settings.json` unter `env`):
-- **`ECC_HOOK_PROFILE`** — `minimal` / `standard` / `strict` (Default: `standard`).
-- **`ECC_DISABLED_HOOKS`** — komma-getrennte Hook-IDs, die **gezielt** abgeschaltet werden (Vorrang vor allem).
+Gesteuert über Umgebungs-Variablen (`env`-Block in `settings.json`):
+- **`ECC_HOOK_PROFILE`** — `minimal` / `standard` / `strict` (Upstream-Default: `standard`).
+- **`ECC_GATEGUARD`** — `off` schaltet die beiden GateGuard-Hooks ab.
 - **`ECC_GOVERNANCE_CAPTURE`** — schaltet die beiden Governance-Hooks erst mit `1` scharf.
+- (`ECC_DISABLED_HOOKS` — gezielte ID-Liste — existiert weiterhin, wird bei dir aber
+  **nicht mehr** genutzt; der frühere Listen-Hack wurde durch das Profil-System ersetzt.)
+
+### Dein Scope-Setup (seit 2026-06-05/10)
+- **Global** (`~/.claude/settings.json`): `ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off`
+  → in Nicht-ECC-Projekten feuern nur essenzielle Hooks (Metriken, Session-Speicherung,
+  Kosten). Commands/Skills/Agents/MCPs des Plugins bleiben überall verfügbar.
+- **Projekt-lokal** (onboarded, z. B. dieses Repo): `.claude/settings.json` setzt
+  `ECC_HOOK_PROFILE=standard` → volle Pipeline (quality-gate, console-warn, observe,
+  governance, metrics …) nur dort.
+- **Wirkung:** env-Änderungen greifen erst in einer **frischen Session**.
 
 ### ⚠️ GateGuard ist bei dir bewusst abgeschaltet
-In `/root/.claude/settings.json` steht:
-```json
-"ECC_DISABLED_HOOKS": "pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force"
-```
-GateGuard würde die **erste Änderung pro Datei blockieren** und vorher Recherche erzwingen
-(Wer importiert die Datei? Welche Schemata hängen dran?). Du hast ihn deaktiviert, weil er
-beim normalen Arbeiten genervt hat. Profil bleibt `standard` — alle nützlichen Hooks laufen
-weiter.
+`ECC_GATEGUARD=off` (global). GateGuard würde die **erste Änderung pro Datei blockieren**
+und vorher Recherche erzwingen (Wer importiert die Datei? Welche Schemata hängen dran?).
+Du hast ihn deaktiviert, weil er beim normalen Arbeiten genervt hat.
 
 ### Was strict zusätzlich brächte
 Nur **drei** zusätzliche Terminal-Erinnerungen: `tmux-reminder`, `git-push-reminder`,
@@ -529,8 +550,8 @@ dagegen. Das heißt: einmal hochladen (Index), danach beliebig oft suchen.
 ```bash
 bash bestpractice-extras/scripts/mgrep/index.sh
 ```
-Liest den Key aus `settings.json`, setzt das Datei-Limit (~2,5 k Dateien inkl. vendored
-`ecc/`), startet `mgrep watch`. Nach dem initialen Sync (`processed / uploaded`) mit **Ctrl+C**
+Liest den Key aus `settings.json`, setzt das Datei-Limit, startet `mgrep watch`. (Seit der
+Plugin-only-Migration ist der Baum deutlich kleiner — kein vendored `ecc/` mehr.) Nach dem initialen Sync (`processed / uploaded`) mit **Ctrl+C**
 beenden — der Store bleibt durchsuchbar; `watch` muss **nicht** laufen.
 
 ### ⚠️ Outbound-Hinweis
@@ -678,7 +699,7 @@ Was Schritt für Schritt passiert, wenn du von Null ein Feature baust:
 4. **PLAN (Phase 2)** — `/plan` mit dem Briefing: Anforderungen restaten, Risiken, Schritt-Plan,
    **wartet auf dein OK**.
 5. **IMPLEMENT (Phase 3)** — `/feature-dev` mit TDD (RED → GREEN → REFACTOR). Karpathy-Regeln
-   greifen durchgehend. Bei Bugs zuerst `/systematic-debugging`.
+   greifen durchgehend. Bei Bugs zuerst reproduzieren + failing Test (`ecc:tdd-workflow`).
 6. **REVIEW (Phase 4)** — `/code-review` (+ sprach-spezifisch). Sicherheitskritischer Code
    zieht `security-reviewer`. CRITICAL/HIGH blockieren.
 7. **VERIFY (Phase 5)** — Tests + Build grün; bei Fehlern `/build-fix`, dann zurück zu
@@ -690,8 +711,8 @@ Was Schritt für Schritt passiert, wenn du von Null ein Feature baust:
    `Co-Authored-By:`. Branch statt direkt auf `main`; PR via `gh`/`/pr`. Vor Review: CI grün,
    keine Konflikte, Branch aktuell.
 
-**Garantie:** Alle Eigenbauten sind additiv — der ECC-Core (`ecc/`) wird nie verändert, der
-Wrapper steuert ECC nur über dessen reguläre Hooks und Slash-Commands.
+**Garantie:** Alle Eigenbauten sind additiv — der ECC-Core (globales Plugin) wird nie
+verändert, der Wrapper steuert ECC nur über dessen reguläre Hooks und Slash-Commands.
 
 ---
 
@@ -715,31 +736,162 @@ Wrapper steuert ECC nur über dessen reguläre Hooks und Slash-Commands.
 | **State-Sync** | Dein Adapter, der `state/` (Mensch) und `WORKING-CONTEXT.md` (KI-Loop) synchron hält. |
 | **RPI-Berater** | Deine 4 read-only Advisor (Intake, CTO, Product, UX) vor der Planung. |
 | **Idempotent** | Mehrfaches Ausführen schadet nicht — es wird nur ergänzt, nichts doppelt. |
-| **Vendored** | Eine Kopie von ECC liegt fest im Repo (statt als externe Abhängigkeit). |
+| **Vendored** | Eine Kopie einer Abhängigkeit liegt fest im Repo. ECC **war** bis 2026-06-10 vendored (`ecc/`-Ordner) — heute läuft es als globales Plugin. |
+| **Plugin** | In Claude Code installierte Erweiterung. ECC-Core = Plugin `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0-rc.1`, Cache unter `~/.claude/plugins/cache/ecc/`. |
 
-## 15. Aktivierungs-Status (Stand 2026-06-05)
+## 15. Aktivierungs-Status (Stand 2026-06-10)
 
-Das BestPractice-Repo selbst ist jetzt **onboardet** und die Schicht-2-Mechanik ist **scharf**:
+Die **Plugin-only-Migration** ist abgeschlossen (Commits `d99f3d0` + `8293011`):
 
-- **State-Sync aktiv (Variante A, projekt-lokal):** `.claude/settings.json` enthält additiv
-  `SessionStart→pre`, `Stop→post`, `PreCompact→post` (Aufruf
-  `bestpractice-extras/scripts/state-sync/state-sync.js`). Der `ecc/`-Schreibguard bleibt
-  unberührt. `state/{context,decisions,progress,tasks}.md` ist befüllt (`harvest.js`),
-  `WORKING-CONTEXT.md` wird beim Session-Start aus `state/` gespiegelt.
-- **Globale `ecc-onboard.md`-Drift behoben:** die global installierte Command-Datei war veraltet
-  (6,3 K ohne Schritt 4b/4c); jetzt = Repo-Version (13 K mit State-Sync-Verdrahtung + consumer-scaffold).
-- **Global gelayerte Extras erweitert:** rpi-Advisors (`~/.claude/agents/`), `attribution-policy.md`
-  (`~/.claude/rules/ecc-extras/`), Dynamic-Context-Profile `contexts/{dev,review}.md`
-  (`~/.claude/contexts/`). `install-vps.sh` deployt all das künftig automatisch.
-- **Unberührt:** ECC-Core (`git status -- ecc/` leer), RTK-Hook (`PreToolUse:Bash` global),
-  globale ECC-Lifecycle-Hooks.
+- **ECC-Core = globales Plugin.** `ecc@ecc` 2.0.0-rc.1, gepinnt via
+  `extraKnownMarketplaces.ecc` auf GitHub `affaan-m/ECC` Tag `v2.0.0-rc.1`. Cache:
+  `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`. Die vendored Kopie `ecc/` im Repo und der
+  213-MB-Klon `/root/projekte/ECC` sind **gelöscht**.
+- **ECC-Duplikate im Home entfernt:** globale Rules-/Hooks-/Skills-Kopien unter `~/.claude/`
+  sind weg (das Plugin liefert sie). Geblieben: 3 Schicht-2-Symlinks (`start`, `mega-plan`,
+  `ecc-onboard`), `skills/learned`, `skills/system-architektur`, `rules/ecc-extras/`.
+- **Abgelöste Plugins (in `enabledPlugins` auf `false`):** `claude-mem` (ersetzt durch
+  ECC-Memory: memory-MCP + Instincts + `/save-session`), `superpowers` (ersetzt durch
+  ECC-Workflows: `tdd-workflow`, `verification-loop` …), `context7@claude-plugins-official`
+  und `feature-dev` (ECC bringt eigene Pendants mit).
+  ⚠️ Plugin-Änderungen greifen erst nach einem **Neustart von Claude Code** — `/clear`
+  lädt Plugins **nicht** neu.
+- **Hook-Scope:** global `ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off`; onboarded
+  Projekte setzen lokal `standard` (BestPractice, Werkstattauftraege_codex,
+  Grow3_Automatisierung, Test-ECC, Verladelisten_Hafen).
+- **State-Sync aktiv (projekt-lokal):** `.claude/settings.json` → SessionStart→`pre`,
+  Stop/PreCompact→`post` (`bestpractice-extras/scripts/state-sync/state-sync.js`).
+- **Backup:** kompletter Stand vor der Migration unter `/root/harness-backup-20260610/`
+  (inkl. geretteter Eigenarbeit aus dem ECC-Klon in `ecc-clone-eigenes/`).
+- **Unberührt:** RTK-Hook (`PreToolUse:Bash` global), Attribution-Policy (Co-Authorship
+  aktiv, Schicht-2-Override).
 
 > Hinweis: Die Office-Snapshots `ECC-Harness-Guide.de.docx/.pptx` werden aus ihrer eigenen
 > Markdown-Quelle `docs/ECC-Harness-Guide.de.md` gebaut:
-> `python3 bestpractice-extras/scripts/build-docs/build.py` (Stand 2026-06-05 nachgezogen).
+> `python3 bestpractice-extras/scripts/build-docs/build.py`.
 
 ---
 
-*Dieses Erklärbuch wurde aus einer Live-Analyse deines Repos (6 parallele Recherche-Agenten)
-erstellt. Bei künftigen ECC-Updates gegen `affaan-m/ecc` abgleichen — siehe Abschnitt 1
-("die goldene Regel").*
+## 16. Praxis-Leitfaden
+
+> **Das Kapitel beantwortet:** Wie benutze ich ECC konkret, damit ich Token spare und
+> schneller/sicherer arbeite? Welche MCPs habe ich, wie funktioniert Memory, wer wählt
+> die Modelle?
+
+### 16.1 Deine MCP-Landkarte (was du wirklich hast)
+
+ECC bringt **6 MCP-Server** mit (definiert in der Plugin-`.mcp.json` — du musst nichts
+konfigurieren):
+
+| MCP | Wofür | Wann benutzen |
+|---|---|---|
+| **memory** | Wissensgraph über Sessions hinweg (Entities, Relations, Observations) | „Haben wir das schon mal gelöst?", Architektur-Entscheidungen festhalten |
+| **context7** | Aktuelle Library-Dokus (React, Prisma, Django …) | Immer statt WebFetch/Googeln bei Library-Fragen |
+| **github** | Issues, PRs, Code-Suche auf GitHub | PR-Flows, Upstream-Recherche |
+| **exa** | Web-Suche (HTTP-Dienst) | Recherche jenseits von Library-Dokus |
+| **playwright** | Browser-Steuerung | E2E-Tests, UI-Verifikation |
+| **sequential-thinking** | Strukturiertes Schritt-für-Schritt-Denken | komplexe Mehrschritt-Probleme |
+
+Dazu unabhängig von ECC: **markitdown** (PDF/Word/Excel/PPTX → Markdown) und die
+claude.ai-Connectoren (Gmail, Drive, Notion …).
+
+> **context7-Klarstellung:** Das offizielle context7-Plugin ist bewusst **deaktiviert** —
+> context7 läuft über ECC (Tools heißen `mcp__plugin_ecc_context7__*`). Kein Verlust,
+> keine Dubletten.
+
+### 16.2 Memory im Detail — drei Gedächtnisse, drei Aufgaben
+
+Dein System hat **drei** Gedächtnis-Mechanismen. Verwechsle sie nicht:
+
+| Mechanismus | Was es speichert | Wie du es benutzt |
+|---|---|---|
+| **memory-MCP** (Wissensgraph) | Fakten als Graph: Entities („WMS Live"), Relations („nutzt → SQLite"), Observations (Sätze) | aktiv per Tool: `search_nodes` (suchen), `open_nodes` (lesen), `create_entities` / `add_observations` (schreiben) |
+| **Instincts** (Continuous Learning) | Gelernte Arbeitsmuster aus deinen Sessions, mit Konfidenz | passiv — ECC sammelt selbst; einsehen mit `/instinct-status`, befördern mit `/promote` |
+| **state/ + WORKING-CONTEXT.md** (State-Sync, Schicht 2) | Projekt-Zustand: Kontext, Entscheidungen, Tasks, Fortschritt | automatisch via Hooks (SessionStart/Stop); von Hand pflegst du `state/*.md` |
+
+Dazu `/save-session` / `/resume-session` für ganze Sitzungs-Snapshots
+(`~/.claude/session-data/`).
+
+**So nutzt du den memory-MCP richtig:**
+- **Session-Anfang:** `search_nodes` mit Stichwort („Auth-Refactor", „Deployment WMS") —
+  billiger als Dateien wälzen.
+- **Nach wichtigen Entscheidungen:** Entity + Observation anlegen lassen („Merke dir: …").
+  Claude macht das nicht immer von selbst — explizit sagen lohnt sich.
+- ⚠️ **Speicherort-Falle:** Die Graph-Datei liegt aktuell im npx-Cache
+  (`~/.npm/_npx/<hash>/node_modules/@modelcontextprotocol/server-memory/dist/memory.jsonl`),
+  weil ECC kein `MEMORY_FILE_PATH` setzt. `npm cache clean` oder ein Versions-Bump des
+  Servers kann sie **verwerfen**. Konsequenz: memory-MCP für **kompakte Schlüssel-Fakten**
+  nutzen; langlebige Wahrheit gehört in `state/` und die Doku (beides in Git).
+
+### 16.3 Modelle — was automatisch passiert und was du selbst tust
+
+**Subagents: automatisch.** Jeder der 63 ECC-Agenten hat ein festes Modell im
+Frontmatter seiner Definition (`model: sonnet` etc.). Du musst **nichts** wählen:
+`planner`/`architect` laufen auf Opus, `doc-updater` auf Haiku, fast alle anderen
+(Reviewer, Build-Resolver …) auf Sonnet. Ein `/code-review` spawnt also automatisch
+einen Sonnet-Reviewer — egal, welches Modell deine Haupt-Session fährt.
+
+**Haupt-Session: du.** Das Modell deiner Session wechselst du mit `/model` (oder
+startest mit `claude --model …`). Deine Strategie:
+
+| Situation | Modell |
+|---|---|
+| Standard (Coding, Review, Doku) | **Opus 4.8 (1M)** — dein Default, mit `/fast` schnell genug |
+| Einfache, klar umrissene Aufgabe, Budget schonen | Sonnet 4.6 |
+| Worker in Multi-Agent-Setups | Haiku 4.5 (setzen die Agents selbst) |
+| Unsicher, was angemessen ist | `/model-route` fragen (empfiehlt Tier nach Komplexität/Risiko) |
+
+**Wann wechseln?** Hoch zu Opus, wenn: erster Versuch gescheitert · 5+ Dateien betroffen ·
+Architektur-Entscheidung · Security-kritisch. Runter zu Sonnet, wenn die Aufgabe klar
+definiert und mechanisch ist. Effort-Level: `medium` Standard, `high` bei harten
+Bugs/Architektur.
+
+### 16.4 Der Workflow im Alltag (so sieht er wirklich aus)
+
+```
+Tagesstart        /start          (State-Sync PRE + rtk-Budget + Agenda + 1 Folgebefehl)
+   │
+Aufgabe > 30 min? ─ ja → vage/groß? ─ ja → /mega-plan <Ziel>  (4 Berater parallel)
+   │                        └─ nein → /plan                    (wartet auf dein OK!)
+   │ nein → direkt machen (aber Karpathy: erst denken, dann tippen)
+   │
+IMPLEMENT         /feature-dev + TDD (Tests ZUERST)
+BUG?              reproduzieren + failing Test (ecc:tdd-workflow), DANN fixen
+   │
+REVIEW            /code-review (+ /python-review, /react-review …)
+VERIFY            Tests/Build grün; rot → /build-fix → zurück
+   │
+Session-Ende      /save-session   (State-Sync POST läuft automatisch)
+```
+
+Merksatz: **Du tippst Commands, ECC orchestriert Agenten, Skills laden sich selbst,
+Hooks passen im Hintergrund auf.**
+
+### 16.5 Neue / bestehende Projekte — mit und ohne ECC
+
+**Ohne Onboarding musst du NICHTS tun.** Das Plugin ist global: alle Commands, Agents,
+Skills und MCPs funktionieren in jedem Ordner. Das globale Profil `minimal` sorgt nur
+dafür, dass die schwere Hook-Pipeline (quality-gate, observe, governance) dort **nicht**
+feuert — essenzielle Hooks (Session-Speicherung, Metriken, Kosten) laufen trotzdem.
+
+**ECC-ready machen lohnt sich, wenn du regelmäßig dort arbeitest:** `/ecc-onboard`
+(Dry-Run, ein OK) legt an: `.claude/rules/ecc/` + Skills passend zum Stack,
+`PROJECT_RULES.md`, `state/`-Gedächtnis, State-Sync-Hooks und projekt-lokal
+`ECC_HOOK_PROFILE=standard` → volle Pipeline nur dort. Danach: frische Session starten.
+
+### 16.6 Token-Spar-Checkliste (Reihenfolge nach Wirkung)
+
+1. **rtk läuft automatisch** (PreToolUse-Hook rewritet Bash-Befehle) — aktuell ~52 %
+   Ersparnis auf 38 M Token. Budget prüfen: `rtk gain`.
+2. **mgrep statt grep** für konzeptuelle Suche (`mgrep search "<konzept>"`) — ~50 %
+   weniger Such-Token. Index vorher einmal manuell bauen (Outbound-Entscheidung!).
+3. **Subagents lesen lassen:** Exploration/große Reads an Explore-Agents delegieren —
+   nur die Zusammenfassung landet in deinem Kontext.
+4. **`/compact` mit Hint bei > 40 % Kontext** („behalte: X, vergiss: Y") — nie
+   Autocompact abwarten. `/clear` vor wirklich neuem Thema.
+5. **context7 statt WebFetch** bei Library-Fragen — präziser, kürzer.
+6. **markitdown für Office/PDF** statt Roh-Bytes lesen.
+7. **MCP-Diät:** max. ~10 aktive Server / ~80 Tools — jedes geladene Tool-Schema kostet
+   Kontext. Deshalb: abgelöste Plugins aus bleiben lassen.
+8. **Modell-Tiering:** Subagents erledigen das automatisch (16.3); Haupt-Session bewusst
+   wählen.

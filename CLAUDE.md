@@ -64,7 +64,7 @@ Details siehe Abschnitt „Hook-Scope" unten + `docs/WO-LAEUFT-WAS.md`.
   (PostToolUse) · observe/governance/metrics · pre:compact — alle FLAGGED-Hooks aus dem Plugin.
 - **DIRECT-Hooks** (Stop: format-typecheck · check-console-log · session-end): nicht env-gatebar,
   laufen überall, no-oppen sich aber selbst ohne relevante Arbeit (kein Formatter / keine Edits).
-- **State-Sync (projekt-lokal, `.claude/settings.json`)**: SessionStart→`state-sync pre`, Stop/PreCompact→`state-sync post` — spiegelt `state/` ⇄ `WORKING-CONTEXT.md` (Schicht 2, ecc/-Guard unberührt)
+- **State-Sync (GLOBAL, `~/.claude/settings.json`)**: SessionStart→`state-sync pre`, Stop/PreCompact→`state-sync post` über `~/.claude/state-sync/` (Symlink→Repo-Engine) — spiegelt `state/` ⇄ `WORKING-CONTEXT.md`. Guard (`state/.ecc-managed` ODER 4 STATE_FILES) = No-op in Nicht-ECC-Projekten; onboarded Projekte brauchen **keine** eigenen state-sync-Hooks mehr (Schicht 2, ecc/-Guard unberührt)
 - **Wirkung:** env-Änderungen greifen erst in einer **frischen Session**.
 
 ## Harness-Architektur
@@ -105,7 +105,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 ## Schicht-2-Befehle
 
 - `/start` — Tagesstart in einem Befehl (State-Sync PRE + rtk + Agenda + 1 Folgebefehl).
-- `/ecc-onboard` — Projekt ECC-ready machen (Stack-Detection + state-sync).
+- `/ecc-onboard` — Projekt schlank ECC-ready machen (De-Cruft → Slim-Scaffold → maschinelle Abnahme; state-sync global).
 - `/mega-plan` — RPI-Berater (CTO/PM/UX/Intake) parallel → Briefing → ECCs `/plan`.
 
 ## Schicht-2-Tooling

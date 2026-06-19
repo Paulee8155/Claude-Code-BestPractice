@@ -1,12 +1,12 @@
 # Engineering Harness — ECC × BestPractice
 
 > **Das fusionierte, VPS-weite Claude-Code-Harness — Bedienungsanleitung.**
-> Global aktiv in `~/.claude` · ECC 2.0.0-rc.1 (core, führend) · RTK-sicher.
-> Quelle/Re-Install: `/root/projekte/Claude Code BestPractice` → `./install-vps.sh`
+> ECC 2.0.0-rc.1 als **globales Plugin** `ecc@ecc` (führend) · Schicht-2-Extras im Repo · RTK-sicher.
+> Seit der Plugin-only-Migration (2026-06-10): keine vendored `ecc/`-Kopie mehr, claude-mem/superpowers deaktiviert.
 >
 > **Halte mich offen.** Dieses Dokument ist dein Nachschlagewerk neben dem Code: wann welcher Command, welches Modell, welcher MCP. Basiert auf den Guides von @affaanmustafa (X-Links am Ende).
 >
-> *Single Source ist diese Markdown-Datei (`docs/ECC-Harness-Guide.de.md`). Die Word-/PowerPoint-Snapshots werden daraus gebaut: `bestpractice-extras/scripts/build-docs/`. Stand: 2026-06-05.*
+> *Single Source ist diese Markdown-Datei (`docs/ECC-Harness-Guide.de.md`). Die Word-/PowerPoint-Snapshots werden daraus gebaut: `bestpractice-extras/scripts/build-docs/`. Stand: 2026-06-10.*
 
 ---
 
@@ -14,7 +14,7 @@
 
 Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
-- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, manifest-basierter Installer, Continuous Learning, Security-Scanning. Global installiert (core-Profil): 80 Commands, 63 Agents, 21 ECC-Skills, `rules/ecc` = common + 19 Sprach-/Domain-Packs; mehr Skills via `--profile full` (249).
+- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, Continuous Learning, Security-Scanning, 6 mitgebrachte MCP-Server. Läuft als **globales Plugin** `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0-rc.1` (Cache: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`) — damit in JEDEM Projekt verfügbar, ohne Kopien im Home oder Repo.
 - **BestPractice-Extras** — die wenigen einzigartigen Stärken deines alten Harness, die ECC ergänzen: `/ecc-onboard` (One-Shot-Projekt-Setup), das `state/`-Pattern, der State-Sync, die RPI-Berater und die Karpathy-Prinzipien.
 
 **Philosophie in einem Satz:** „Konfiguration ist Fine-Tuning, nicht Architektur." Baue wiederverwendbare Muster, halte das Kontextfenster sauber, delegiere an das billigste ausreichende Modell, verifiziere mit Evidenz — und lass Komfort nie die Sicherheit überholen.
@@ -23,35 +23,37 @@ Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
 ## 2 · Setup & VPS-Architektur
 
-ECC ist GLOBAL nach `~/.claude` installiert und damit in JEDEM Projekt auf der VPS aktiv (WMS, Jarvis, n8n, Werkstatt …). Die Installation ist bewusst additiv und namespace-sicher:
+ECC läuft als globales **Plugin** und ist damit in JEDEM Projekt auf der VPS verfügbar (WMS, Jarvis, n8n, Werkstatt …). Das Setup ist bewusst schlank und reproduzierbar:
 
-- **Namespace-sicher:** ECC liegt unter `rules/ecc/` und `skills/ecc/` — keine Kollision mit Eigenem.
+- **Plugin-only:** Single Source ist `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` — keine Kopien mehr unter `~/.claude/{rules,hooks,skills,commands}` und keine vendored `ecc/` im Repo. Update = `extraKnownMarketplaces.ecc.source.ref` in `~/.claude/settings.json` auf neuen Tag setzen.
 - **RTK bleibt König:** Der globale `PreToolUse:Bash`-Hook (RTK, 60–90 % Token-Ersparnis) wurde NICHT angefasst.
-- **Startup-Config additiv:** Der Installer lässt `settings.json`/`CLAUDE.md` unberührt. Bewusste Aufräum-Schritte (feature-dev-Plugin deaktiviert, context-mode entfernt) wurden separat mit Backup vorgenommen.
-- **Reproduzierbar:** Quelle ist das Repo; Re-Install via `./install-vps.sh` (idempotent, mit Backup).
+- **Hook-Zähmung per Profil:** global `ECC_HOOK_PROFILE=minimal` (Nicht-ECC-Projekte ruhig), projekt-lokal `standard` in onboardeten Projekten (volle Pipeline). Details §14.
+- **Backup:** kompletter Vor-Migrations-Stand unter `/root/harness-backup-20260610/`.
 
-**Koexistenz mit deinem bestehenden Setup:**
+**Abgelöste Plugins (in `enabledPlugins` auf `false` — Änderung greift erst nach Claude-Code-Neustart):**
 
-| Dein Tool | ECC-Pendant | Empfehlung |
-| --- | --- | --- |
-| superpowers | tdd-workflow, verification-loop … | Beides nutzbar; bei Doppelung ECC bevorzugen |
-| claude-mem | /save-session, continuous-learning-v2 | primäre Memory-Quelle; injiziert Kontext automatisch |
-| RTK | Token-Ökonomie (§10) | Ergänzen sich: RTK auf Bash-, ECC auf Workflow-Ebene |
-| codex / superpowers | diverse Skills/Agents | eigenständiger Mehrwert; bleiben aktiv |
+| Plugin (aus) | ECC-Pendant (führend) |
+| --- | --- |
+| superpowers | tdd-workflow, verification-loop, dispatching über ECC-Agents |
+| claude-mem | memory-MCP (Wissensgraph) + Instincts + /save-session |
+| context7@official | ECC bringt eigenes context7-MCP mit |
+| feature-dev | /feature-dev (ECC-Command) |
 
-**Aufgeräumt:** feature-dev existierte 3-fach — die ECC-Version ist kanonisch, das gleichnamige Plugin wurde deaktiviert. RPI als Plugin wurde entfernt (durch die schlanken Schicht-2-RPI-Berater ersetzt). Bei Namens-Zweifeln eindeutige ECC-Commands nutzen (`/harness-audit`, `/ecc-guide`, `/ecc-onboard`, `/instinct-status`).
+**Weiter aktiv neben ECC:** codex, mgrep, LSP-Plugins, frontend-design, skill-creator u. a. — eigenständiger Mehrwert ohne Doppelung. Bei Namens-Zweifeln eindeutige ECC-Commands nutzen (`/harness-audit`, `/ecc-guide`, `/ecc-onboard`, `/instinct-status`).
 
 ## 3 · Mentales Modell — die Bausteine
 
-| Baustein | Was es ist | Wo (global) | Lebensdauer |
+| Baustein | Was es ist | Wo | Lebensdauer |
 | --- | --- | --- | --- |
-| Skills | Durable Kern: wiederverwendbare Workflow-Bündel, laden on-demand | ~/.claude/skills/ecc/ | langlebig |
-| Commands | Slash-Einstiegspunkte (/plan, /code-review …) | ~/.claude/commands/ | Komfort-Schicht |
-| Subagents | Delegierbare Spezialisten mit eigenem Tool-Scope | ~/.claude/agents/ | pro Aufgabe |
-| Hooks | Trigger-Automatik an Lifecycle-Events (s. §14) | ~/.claude/hooks/ | event-gebunden |
-| Rules | „Immer befolgen"-Leitlinien je Sprache | ~/.claude/rules/ecc/ | dauerhaft |
-| MCP | Prompt-getriebene Wrapper um externe Dienste | .mcp.json / global | pro Session |
-| Instincts | Gelernte Muster aus deinen Sessions | homunculus/instincts/ | wächst mit dir |
+| Skills | Durable Kern: wiederverwendbare Workflow-Bündel, laden on-demand | Plugin `skills/` (alle 249) | langlebig |
+| Commands | Slash-Einstiegspunkte (/plan, /code-review …) | Plugin `commands/` (+ 3 Schicht-2: /start, /mega-plan, /ecc-onboard) | Komfort-Schicht |
+| Subagents | Delegierbare Spezialisten mit eigenem Tool-Scope + festem Modell | Plugin `agents/` (+ RPI-Berater in bestpractice-extras/) | pro Aufgabe |
+| Hooks | Trigger-Automatik an Lifecycle-Events (s. §14) | Plugin `hooks/hooks.json`, gesteuert per ECC_HOOK_PROFILE | event-gebunden |
+| Rules | „Immer befolgen"-Leitlinien je Sprache | **global** im Plugin (`ecc@ecc`) — kein Projekt-Vendoring mehr | dauerhaft |
+| MCP | Externe Dienste als Tools (memory, context7, github, exa, playwright, sequential-thinking) | Plugin `.mcp.json` | pro Session |
+| Instincts | Gelernte Muster aus deinen Sessions | ~/.claude (continuous-learning), /instinct-status | wächst mit dir |
+
+*(Plugin-Pfad jeweils: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`.)*
 
 **Wichtigste Regel:** Die durable Logik gehört in Skills. Commands sind nur der bequeme Einstieg. Was du zum dritten Mal tippst → mach eine Skill draus (`/skill-create`).
 
@@ -77,7 +79,7 @@ ECC ist GLOBAL nach `~/.claude` installiert und damit in JEDEM Projekt auf der V
 | Lernen / Memory | continuous-learning(-v2) · strategic-compact · agent-introspection-debugging |
 | Setup / Automatik | configure-ecc · hookify-rules · agent-sort |
 
-**Mehr verfügbar:** Mehr (249 Skills) via `./install-vps.sh --profile full`. claude-mem (mem-search, smart-explore) + superpowers koexistieren.
+**Alle 249 Skills liefert das Plugin direkt** — kein Install-Profil mehr nötig. claude-mem und superpowers sind deaktiviert; ihre Aufgaben übernehmen memory-MCP/Instincts bzw. die ECC-Workflows (`tdd-workflow`, `verification-loop`).
 
 ## 5 · Täglicher Workflow — die 5-Phasen-Pipeline
 
@@ -85,7 +87,7 @@ Der Erfinder arbeitet in klaren Phasen, mit `/clear` dazwischen und Zwischenerge
 
 | Phase | Schritt | Output |
 | --- | --- | --- |
-| 1 · RESEARCH | Explore-Agent / claude-mem | research.md |
+| 1 · RESEARCH | Explore-Agent / memory-MCP (search_nodes) | research.md |
 | 2 · PLAN | /plan (wartet auf dein OK!) | plan.md |
 | 3 · IMPLEMENT | /feature-dev + Skill tdd-workflow | Code + Tests |
 | 4 · REVIEW | /code-review (+ /\<sprache\>-review) | review.md |
@@ -102,15 +104,15 @@ Die teuerste Verschwendung ist, die Codebase in jeder Session neu zu durchsuchen
 
 ### a) Projekt ECC-ready machen — /ecc-onboard (einmalig je Projekt)
 
-Ein Command, ein OK: erkennt den Stack, installiert ECC project-level und legt persistente Projekt-Dateien an, die Claude künftig zuerst liest.
+Ein Command, ein OK: **schlank (plugin-only)**. ECC-Core ist global — ins Projekt kommt nur der minimale projektlokale Kern. Ein deterministisches Script (`onboard.js`) erledigt die Mechanik, eine maschinelle Abnahme (`onboard-verify.js`) belegt „fertig". **Kein** Vendoring (`.claude/rules/ecc` etc.), funktioniert auch in Fremd-Repos.
 
 | Schritt | Was passiert | Ergebnis (persistent) |
 | --- | --- | --- |
-| 1 · Detect | Stack aus package.json / go.mod / pyproject.toml … erkennen | Profil + Sprach-Packs |
-| 2 · Dry-Run | install-apply --target claude-project --dry-run | Plan ohne Schreiben |
-| 3 · Bestätigung | 1× OK des Users | Freigabe |
-| 4 · Install | install-apply --target claude-project | .claude/rules/ecc/ + skills/ecc/ |
-| 5 · Kontext | Templates mit echten Werten füllen | PROJECT_RULES.md + state/* |
+| 1 · Dry-Run | `onboard.js --project <dir>` | Preflight + De-Cruft-Plan + Slim-Scaffold-Plan, schreibt nichts |
+| 2 · Bestätigung | 1× OK des Users | Freigabe |
+| 3 · Apply | `onboard.js --apply` | De-Cruft (Altlasten → `.harness-backup/`) + Slim-Scaffold |
+| 4 · Slim-Kern | env-Block + `state/` + Sentinel + `.gitignore` + consumer-Artefakte + initialer PRE | `.claude/settings.json`, `state/*`, `WORKING-CONTEXT.md` |
+| 5 · Verfeinern | Templates mit echten Werten füllen + `onboard-verify` | PROJECT_RULES.md + CLAUDE.md, alle Pflicht-Checks grün |
 
 *Aus dem Zielprojekt-Verzeichnis ausführen (Install landet im aktuellen cwd). Idempotent: erneut ausführen merged, überschreibt nichts blind.*
 
@@ -126,13 +128,13 @@ Scannt die Struktur EINMAL und schreibt token-arme Architektur-Karten auf Platte
 | data.md | Tabellen, Relationen, Migrations-Historie |
 | dependencies.md | externe Dienste, Third-Party-Integrationen |
 
-**Wann neu bauen?** Codemaps sind ein Snapshot — sie aktualisieren sich nicht von selbst. Nach größeren Architektur-Änderungen `/update-codemaps` erneut laufen lassen. Erstes Mal in einem fremden Repo: code-tour-Skill bzw. claude-mem smart-explore/learn-codebase erzeugen Touren/Struktur.
+**Wann neu bauen?** Codemaps sind ein Snapshot — sie aktualisieren sich nicht von selbst. Nach größeren Architektur-Änderungen `/update-codemaps` erneut laufen lassen. Erstes Mal in einem fremden Repo: `code-tour`- bzw. `codebase-onboarding`-Skill erzeugen Touren/Struktur.
 
 ### c) Pro Aufgabe recherchieren — research.md-Pattern
 
 - **Phase-1-Output in Datei:** Ein Explore-/code-explorer-Agent kartiert die für DIE Aufgabe relevanten Dateien/Muster → research.md. Das wird Input für `/plan`.
 - **code-tour (optional):** Erzeugt wiederverwendbare .tour-Dateien (öffnen direkt Datei+Zeile) — ideal für Onboarding oder Architektur-Walkthroughs.
-- **claude-mem ergänzt:** Injiziert relevanten Kontext aus früheren Sessions ab der 2. Session automatisch. `/mem-search` für gezielte Treffer („schon mal gelöst?").
+- **Memory ergänzt:** Der ECC-SessionStart-Hook lädt Session-Kontext; in onboardeten Projekten spiegelt State-Sync `state/` nach `WORKING-CONTEXT.md`. Gezielt nachschlagen („schon mal gelöst?"): memory-MCP `search_nodes` + `/instinct-status`.
 
 **Die Regel dahinter:** „In Dateien speichern, nicht im Kopf behalten." research.md → plan.md → review.md, dazwischen `/clear`. Codemaps + PROJECT_RULES.md + state/ sind die dauerhafte Landkarte; der Chat-Kontext bleibt schlank.
 
@@ -147,7 +149,7 @@ Kapitel 5–6 erklären die Phasen und das Onboarding einzeln. Hier laufen sie a
 ```
 mkdir mein-projekt && cd mein-projekt && git init
 claude                 # Claude Code IN diesem Ordner starten
-/ecc-onboard           # Stack-Frage → 1x OK → .claude/rules+skills, PROJECT_RULES.md, state/
+/ecc-onboard           # Dry-Run → 1x OK → De-Cruft + slim Scaffold (env, state/, PROJECT_RULES.md) → Abnahme
 /plan Baue <Feature X> # erster Plan — wartet auf dein OK
 ```
 
@@ -169,7 +171,7 @@ Eine Aufgabe, fünf Phasen, je ein Datei-Output, `/clear` dazwischen, billigstes
 
 | Phase | Du tippst | Modell | Output (Datei) |
 | --- | --- | --- | --- |
-| 1 · RESEARCH | Explore-Agent: Routing/Handler/Tests kartieren (+ claude-mem) | Haiku | research.md |
+| 1 · RESEARCH | Explore-Agent: Routing/Handler/Tests kartieren (+ memory-MCP) | Haiku | research.md |
 | — /clear — | Explorations-Kontext ist für die Umsetzung irrelevant | — | — |
 | 2 · PLAN | /plan /api/search: Query → Filter → Paginierung, Tests zuerst | Opus | plan.md (wartet auf OK) |
 | 3 · IMPLEMENT | /feature-dev plan.md umsetzen (Skill tdd-workflow) | Sonnet→Opus | Code + Tests (RED→GREEN) |
@@ -198,8 +200,8 @@ Explore-Agent: kartiere vorhandenes Routing/Handler/Tests für Suche → researc
 
 | Wann | Was du tust | Warum |
 | --- | --- | --- |
-| Session-Start | /start · claude-mem injiziert Kontext (ab 2. Session) · rtk gain | nahtlos weiter, wo du warst |
-| Vor großer Aufgabe | /resume-session · /mem-search „schon gelöst?" | Alt-Wissen nutzen statt neu lösen |
+| Session-Start | /start (State-Sync PRE + rtk-Budget + Agenda) | nahtlos weiter, wo du warst |
+| Vor großer Aufgabe | /resume-session · memory-MCP search_nodes „schon gelöst?" · /instinct-status | Alt-Wissen nutzen statt neu lösen |
 | Während | in Phasen arbeiten · /clear zwischen Phasen · /checkpoint | Kontext schlank, billiges Modell |
 | Nebenfrage | /aside (oder /fork) | Haupt-Task-Kontext nicht verlieren |
 | Session-Ende | /learn-eval → /evolve → /promote · /save-session | ECC lernt — morgen schneller |
@@ -214,8 +216,8 @@ Explore-Agent: kartiere vorhandenes Routing/Handler/Tests für Suche → researc
 | Neues Feature planen | /plan | Anforderungen, Risiken, Schritte — wartet auf dein OK |
 | Vages/vielschichtiges Ziel | /mega-plan | RPI-Berater parallel → Briefing → /plan |
 | Feature umsetzen | /feature-dev | nutzt Skills/Agents, TDD zuerst |
-| Bug | /systematic-debugging | Root-Cause vor Fix |
-| Projekt ECC-ready machen | /ecc-onboard | Stack erkennen → 1× OK → Rules/Skills + PROJECT_RULES.md + state/ |
+| Bug | reproduzieren + failing Test (ecc:tdd-workflow) | Root-Cause vor Fix, nie blind fixen |
+| Projekt ECC-ready machen | /ecc-onboard | Dry-Run → 1× OK → De-Cruft + Slim-Scaffold (env + state/ + PROJECT_RULES.md) + Abnahme |
 | Codebase kartieren (1×) | /update-codemaps | token-arme Architektur-Karten in docs/CODEMAPS/ |
 | Code geschrieben | /code-review (+ /python-review …) | Qualität + Security der Änderungen |
 | Build/Tests rot | /build-fix | inkrementelle, minimale Fixes |
@@ -232,30 +234,29 @@ Sprach-spezifisch: `/go-build|review|test`, `/rust-*`, `/cpp-*`, `/kotlin-*`, `/
 
 ## 9 · Wann welcher MCP
 
-Faustregel: 20–30 MCPs konfiguriert, aber < 10 aktiv / < 80 Tools. Ungenutztes pro Projekt mit `/mcp` deaktivieren — das Kontextfenster ist kostbar.
+Faustregel: < 10 MCPs aktiv / < 80 Tools. Ungenutztes pro Projekt mit `/mcp` deaktivieren — das Kontextfenster ist kostbar.
 
-**Bei dir aktiv (global):**
+**Das ECC-Plugin bringt 6 MCP-Server mit (automatisch verfügbar, nichts zu konfigurieren):**
+
+| Aufgabe | MCP (via ECC) | Hinweis |
+| --- | --- | --- |
+| Frühere Arbeit / Wissensgraph | memory | search_nodes / open_nodes / create_entities — deine primäre Memory-Quelle (§11) |
+| Aktuelle Library-/API-Doku | context7 | React, Prisma, Next.js … statt veraltetem Wissen. Läuft über ECC (`mcp__plugin_ecc_context7__*`) — das offizielle context7-Plugin bleibt bewusst aus (keine Dubletten) |
+| GitHub (PRs, Issues, Code-Suche) | github | ergänzt die gh-CLI |
+| Web-Recherche / Discovery | exa | breite Suche, wenn GitHub+Docs nicht reichen |
+| Browser / E2E / Screenshots | playwright | headless Automation, visuelle Tests |
+| Schrittweises Reasoning | sequential-thinking | komplexe Mehrschritt-Probleme (s. §15) |
+
+**Dazu unabhängig von ECC:**
 
 | Aufgabe | MCP / Tool | Hinweis |
 | --- | --- | --- |
-| PDF/Word/Excel/PPTX lesen | markitdown | Dokumente → Markdown (lokal, global aktiv) |
-| Aktuelle Library-/API-Doku | context7 | React, Prisma, Next.js … statt veraltetem Wissen (Plugin) |
-| Frühere Arbeit / „schon gelöst?" | claude-mem | deine Memory-Quelle: /mem-search, Auto-Injektion ab 2. Session |
-| Dienste anbinden | claude.ai-Connectoren | n8n · Notion · Gamma · Google Drive · Microsoft Learn · Kiwi |
+| PDF/Word/Excel/PPTX lesen | markitdown | Dokumente → Markdown (lokal) |
+| Dienste anbinden | claude.ai-Connectoren | n8n · Notion · Gamma · Google Drive · Microsoft Learn … |
 | Bash-Token sparen | RTK (Hook, kein MCP) | 60–90 % Ersparnis, läuft transparent global |
 | Semantische Code-/Doku-Suche | mgrep (CLI/Skill, kein MCP) | ~50 % weniger Token als grep — Details in §15 |
 
-**Optional / empfohlen — NICHT installiert, bei Bedarf nachrüsten:**
-
-| Aufgabe | MCP / Tool | Hinweis |
-| --- | --- | --- |
-| Web-Recherche / Discovery | exa | breite Suche, wenn GitHub+Docs nicht reichen |
-| GitHub (PRs, Issues, Code-Suche) | github | du nutzt die gh-CLI statt MCP |
-| Browser / E2E / Screenshots | playwright | headless Automation, visuelle Tests |
-| Strukturierter Wissensgraph | memory | NICHT nötig, claude-mem deckt das ab |
-| Schrittweises Reasoning | sequential-thinking | komplexe Mehrschritt-Probleme (s. §15) |
-
-**Memory-Klarstellung:** Der „memory"-MCP (Wissensgraph) ist NICHT installiert und nicht nötig — claude-mem ist deine primäre Memory-Quelle (§11). EINE Quelle pro Projekt, sonst doppelte Wahrheit.
+**Memory-Klarstellung (seit 2026-06-10 umgedreht):** Der memory-MCP (Wissensgraph) IST installiert (via ECC) und ist deine primäre Memory-Quelle; claude-mem ist deaktiviert. EINE Quelle pro Projekt, sonst doppelte Wahrheit. ⚠️ Die Graph-Datei liegt im npx-Cache (`~/.npm/_npx/<hash>/…/memory.jsonl`, kein MEMORY_FILE_PATH gesetzt) — kompakte Schlüssel-Fakten dort, langlebige Wahrheit zusätzlich in `state/`/Doku (Git).
 
 ## 10 · Token-Ökonomie & Modellstrategie
 
@@ -271,7 +272,7 @@ Billigstes ausreichendes Modell pro Aufgabe — das ist die Subagent-Architektur
 
 **Default-Praxis:** Opus 4.8 (1M) ist als Standard tragbar (schnell genug via `/fast`); für klar abgegrenzte Routinearbeit auf Sonnet 4.6 herabstufen. Effort-Level: `medium` Standard, `high` bei schweren Bugs/Architektur. Hilfe: `/model-route`, `/cost-report`.
 
-**Agenten-Zuweisungen (Default):** security-reviewer → Opus (darf nichts übersehen) · architect, planner → Opus · code-reviewer, tdd-guide, build-error-resolver → Sonnet · doc-updater, code-tour → Haiku.
+**Agenten-Zuweisungen (automatisch!):** Jeder ECC-Agent trägt sein Modell als `model:`-Frontmatter in seiner Definition — du wählst nichts: planner, architect → Opus · Reviewer, Build-Resolver, tdd-guide, security-reviewer u. a. → Sonnet · doc-updater → Haiku. Das gilt unabhängig vom Modell deiner Haupt-Session; manuell überschreiben nur bewusst (Agent-Tool-Parameter `model`).
 
 **Upgrade auf Opus wenn:** erster Versuch scheiterte · Aufgabe umfasst 5+ Dateien · Architekturentscheidung · Security-kritischer Code.
 
@@ -281,11 +282,11 @@ Billigstes ausreichendes Modell pro Aufgabe — das ist die Subagent-Architektur
 
 ## 11 · Memory & Sessions
 
-**claude-mem ist deine primäre, persistente Memory-Quelle:**
+**Drei Gedächtnisse, drei Aufgaben (claude-mem ist deaktiviert):**
 
-- **Automatisch:** injiziert relevanten Kontext aus früheren Sessions ab der 2. Session je Projekt — ohne Zutun.
-- **/mem-search „…":** gezielt frühere Arbeit finden („schon gelöst?", „wie haben wir X gemacht?").
-- **Erfasst von selbst:** Beobachtungen/Entscheidungen werden automatisch gespeichert — kein manuelles Speichern.
+- **memory-MCP (Wissensgraph, via ECC):** Fakten als Entities/Relations/Observations. Aktiv nutzen: `search_nodes` („schon gelöst?"), `open_nodes`, `create_entities`/`add_observations` („Merke dir: …") — Claude speichert nicht alles von selbst, wichtige Entscheidungen explizit merken lassen.
+- **Instincts (Continuous Learning):** ECC sammelt Arbeitsmuster automatisch (observe-Hooks, Profil `standard`); einsehen mit `/instinct-status`, befördern mit `/promote`.
+- **state/ + WORKING-CONTEXT.md (State-Sync, Schicht 2):** Projekt-Zustand, automatisch via SessionStart/Stop-Hooks in onboardeten Projekten; von Hand pflegst du `state/*.md`.
 
 **Sessions explizit sichern/laden (ECC-Commands, ergänzend):**
 
@@ -297,7 +298,7 @@ Billigstes ausreichendes Modell pro Aufgabe — das ist die Subagent-Architektur
 | /checkpoint | Checkpoint im laufenden Lauf |
 | /aside | Nebenfrage ohne Kontextverlust |
 
-Gute Session-Datei: Was funktioniert hat (mit Evidenz) · Was nicht ging · Was offen ist. **EINE Memory-Quelle:** claude-mem ist gesetzt — den generischen „memory"-MCP NICHT zusätzlich aktivieren. Keine Secrets in Memory.
+Gute Session-Datei: Was funktioniert hat (mit Evidenz) · Was nicht ging · Was offen ist. **EINE Memory-Quelle je Zweck:** memory-MCP für Fakten, Instincts für Muster, state/ für Projekt-Zustand — claude-mem bleibt aus. Keine Secrets in Memory.
 
 ## 12 · Continuous Learning (Self-Improvement)
 
@@ -328,16 +329,15 @@ cd ../feature-a && claude   # eigene Instanz
 
 ## 14 · Hooks — was bei dir aktiv ist
 
-Hooks sind kleine Programme, die **von selbst** an Lifecycle-Events feuern (vorher prüfen/blockieren, nachher aufräumen/formatieren/protokollieren). Wichtig zu wissen: Die ECC-`hooks.json` enthält 20+ Hooks, aber das ECC-`plugin.json` registriert **keine** Hooks automatisch — sie wurden gezielt in `~/.claude/settings.json` aktiviert.
+Hooks sind kleine Programme, die **von selbst** an Lifecycle-Events feuern (vorher prüfen/blockieren, nachher aufräumen/formatieren/protokollieren). Seit der Plugin-Migration registriert das **Plugin selbst** seine Hooks (`hooks/hooks.json`, 20+ Stück); welche tatsächlich feuern, steuert das **Profil** `ECC_HOOK_PROFILE` pro Scope:
 
-**Global aktiv (`~/.claude/settings.json`):**
-
-| Hook-Typ | IDs | Zweck |
+| Scope | Profil | Effekt |
 | --- | --- | --- |
-| PostToolUse | post:quality-gate · post:edit:accumulator · post:edit:console-warn | Quality-Gate nach Edit/Write · Sammel-Formatierung merken · console.log warnen |
-| Stop | stop:format-typecheck · stop:check-console-log · stop:session-end | Format+Typecheck · console.log prüfen · Session sichern |
-| SessionStart | session:start (Bootstrap) | vorigen Kontext laden, Paketmanager erkennen |
-| PreCompact | pre:compact | State sichern vor Kontext-Kompaktierung |
+| Global (`~/.claude/settings.json`) | minimal | nur Essenzielles: Metriken-Bridge, Session-Speicherung, Session-Auswertung, Kosten-Tracking, Marker |
+| Onboarded Projekt (`.claude/settings.json`) | standard | volle Pipeline: quality-gate, console-warn, observe/continuous-learning, governance, context-monitor … |
+| (nirgends aktiv) | strict | wie standard + 3 Nag-Erinnerungen (tmux, git-push, commit-quality) |
+
+Dazu laufen wenige DIRECT-Hooks (Stop: format-typecheck · check-console-log · session-end) überall, no-oppen sich aber ohne relevante Arbeit selbst.
 
 **Projekt-lokal aktiv (`.claude/settings.json`) — State-Sync (Schicht 2):**
 
@@ -346,9 +346,9 @@ Hooks sind kleine Programme, die **von selbst** an Lifecycle-Events feuern (vorh
 | SessionStart | state-sync.js pre | state/ → WORKING-CONTEXT.md spiegeln (Loop hat sofort Kontext) |
 | Stop / PreCompact | state-sync.js post | Delta zurück nach state/progress.md + tasks.md |
 
-**Bewusst abgeschaltet:** `pre:bash:gateguard-fact-force` und `pre:edit-write:gateguard-fact-force` (GateGuard) via `ECC_DISABLED_HOOKS` — würden die erste Änderung pro Datei blockieren und Recherche erzwingen (beim normalen Arbeiten störend). Hook-Profil bleibt `standard`: alle nützlichen Hooks laufen weiter; `strict` brächte nur drei zusätzliche Nag-Erinnerungen (tmux, git-push, commit-quality).
+**Bewusst abgeschaltet:** GateGuard via `ECC_GATEGUARD=off` (global) — würde die erste Änderung pro Datei blockieren und Recherche erzwingen (beim normalen Arbeiten störend).
 
-**Profil-Steuerung (env in settings.json):** `ECC_HOOK_PROFILE` (minimal/standard/strict) · `ECC_DISABLED_HOOKS` (gezielt abschalten) · `ECC_GOVERNANCE_CAPTURE=1` (Governance-Hooks scharf).
+**Profil-Steuerung (env in settings.json):** `ECC_HOOK_PROFILE` (minimal/standard/strict) · `ECC_GATEGUARD=off` (GateGuard aus) · `ECC_GOVERNANCE_CAPTURE=1` (Governance-Hooks scharf) · `ECC_DISABLED_HOOKS` (gezielte ID-Liste, bei dir nicht mehr genutzt). **Wirkung erst in frischer Session.**
 
 ## 15 · Power-Tools — mgrep, LSP, Sequential Thinking
 
@@ -378,7 +378,7 @@ Kernhaltung: Baue so, als würde das Modell irgendwann etwas Feindliches lesen, 
 **Bereits aktiv / sicher:**
 
 - **RTK-Hook** (`PreToolUse:Bash`) bleibt unangetastet — Token-Ersparnis global.
-- **ECC namespace-sicher** (`rules/ecc/`, `skills/ecc/`) — keine Kollision mit Eigenem.
+- **ECC namespace-sicher** — Core isoliert im Plugin-Cache (`ecc@ecc`), global verfügbar; **kein** Projekt-Vendoring (slim/plugin-only) — keine Kollision mit Eigenem.
 - **settings.json unberührt** — kein Auto-Edit der Startup-Config; Härtung nur additiv via `./install-vps.sh --harden`.
 
 **Bewusst NICHT automatisch (Least-Agency, opt-in):**
@@ -405,21 +405,22 @@ Kernhaltung: Baue so, als würde das Modell irgendwann etwas Feindliches lesen, 
 ## 18 · ECC-CLIs & Wartung
 
 ```
-cd "/root/projekte/Claude Code BestPractice/ecc"
-node scripts/ecc.js doctor          # Health-Check (claude-home: OK)
-node scripts/ecc.js list-installed  # was ist installiert
-node scripts/ecc.js repair          # ECC-Dateien wiederherstellen
-npx ecc consult "security reviews"  # Advisor: welche Komponenten?
+# Plugin-Pfad (Single Source, read-only behandeln):
+ECC=~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1
 
-# Re-Install / Update VPS-weit:
-cd "/root/projekte/Claude Code BestPractice" && ./install-vps.sh
+node "$ECC/scripts/harness-audit.js"   # Repo-Integritäts-Audit
+node "$ECC/scripts/ecc.js" doctor      # Health-Check
+
+# ECC-Update: in ~/.claude/settings.json den Tag anheben …
+#   extraKnownMarketplaces.ecc.source.ref = "v<neue-version>"
+# … dann Claude Code neu starten (Plugin wird neu gecacht).
 ```
 
-Slash-Einstieg: `/ecc-guide` (Onboarding), `/harness-audit` (Config-Scorecard), `/cost-report`, `/skill-health`, `/projects`.
+Slash-Einstieg: `/ecc-guide` (Onboarding), `/harness-audit` (Config-Scorecard), `/cost-report`, `/skill-health`, `/projects`. ⚠️ Plugin-/Settings-Änderungen greifen erst nach **Neustart von Claude Code** (`/clear` reicht nicht).
 
 ## 19 · Hybrid-Mega-Workflow — State-Sync + RPI-Berater
 
-Der BestPractice-Wrapper koppelt persistenten Projekt-State an ECCs Loop und stellt `/mega-plan` als Planungs-Vorstufe bereit — rein additiv. Der ECC-Core (`ecc/`) bleibt unverändert.
+Der BestPractice-Wrapper koppelt persistenten Projekt-State an ECCs Loop und stellt `/mega-plan` als Planungs-Vorstufe bereit — rein additiv. Der ECC-Core (das globale Plugin) bleibt unverändert.
 
 ### a) Wo wird was gespeichert
 
@@ -460,30 +461,27 @@ Für vage/vielschichtige Ziele: holt mehrere read-only Experten-Perspektiven par
 /feature-dev → /code-review → Verify # normaler ECC-5-Phasen-Flow
 ```
 
-**ECC-Core unberührt:** Alles liegt in `bestpractice-extras/`. `git diff` zeigt keine Änderung unter `ecc/`. Tiefe Doku: `docs/MEGA-WORKFLOW.de.md`.
+**ECC-Core unberührt:** Alles liegt in `bestpractice-extras/`; am Plugin unter `~/.claude/plugins/cache/ecc/` wird nie gepatcht. Tiefe Doku: `docs/MEGA-WORKFLOW.de.md`.
 
-## 20 · Aktivierungs-Status & behobene Bugs (Stand 2026-06-05)
+## 20 · Aktivierungs-Status (Stand 2026-06-10 — Plugin-only-Migration)
 
-Das BestPractice-Repo selbst ist **onboardet** und die Schicht-2-Mechanik ist **scharf**:
+Die Migration auf **Plugin-only** ist abgeschlossen (Commits `d99f3d0` + `8293011`):
 
-- **State-Sync aktiv (Variante A, projekt-lokal):** `.claude/settings.json` enthält additiv `SessionStart→pre`, `Stop→post`, `PreCompact→post` (Aufruf `bestpractice-extras/scripts/state-sync/state-sync.js`). Der `ecc/`-Schreibguard bleibt unberührt. `state/{context,decisions,progress,tasks}.md` ist befüllt, `WORKING-CONTEXT.md` wird beim Session-Start aus state/ gespiegelt.
-- **Globale `ecc-onboard.md`-Drift behoben:** war veraltet (6,3 K ohne Schritt 4b/4c); jetzt = Repo-Version (13 K mit State-Sync-Verdrahtung + consumer-scaffold).
-- **Global gelayerte Extras erweitert:** rpi-Advisors (`~/.claude/agents/`), `attribution-policy.md` (`~/.claude/rules/ecc-extras/`), Dynamic-Context-Profile `contexts/{dev,review}.md` (`~/.claude/contexts/`). `install-vps.sh` deployt das künftig automatisch.
-- **mgrep + LSP verankert:** mgrep als Schicht-2-Tool (MXBAI_API_KEY, `index.sh`); LSP-Plugins `typescript-lsp` + `pyright-lsp` user-scoped installiert.
-- **Unberührt:** ECC-Core (`git status -- ecc/` leer), RTK-Hook (`PreToolUse:Bash` global), globale ECC-Lifecycle-Hooks.
-
-**Behobene Bugs:**
-
-- **`/ecc-onboard` install-plan.js vs install-apply.js (behoben 2026-06-03):** `install-plan.js` übergab kein `projectRoot` → Install landete im ECC-Repo statt im Zielprojekt. Fix: für Dry-Run immer `node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <profil> --dry-run` aus dem Zielprojekt-Root.
-- **Attribution-Policy (Schicht-2-Override):** Co-Authorship ist für dieses Setup AKTIV (Commits enden mit `Co-Authored-By:`); der Upstream-Hinweis „Attribution disabled globally" im vendored Core gilt hier bewusst nicht.
+- **ECC-Core = globales Plugin** `ecc@ecc` 2.0.0-rc.1, gepinnt auf GitHub `affaan-m/ECC` Tag `v2.0.0-rc.1` (`extraKnownMarketplaces` in `~/.claude/settings.json`). Vendored `ecc/` im Repo und der 213-MB-Klon `/root/projekte/ECC` sind gelöscht.
+- **ECC-Duplikate im Home entfernt:** globale Rules- (117 Dateien, verursachten Auto-Compact), Hooks- und Skills-Kopien sind weg — das Plugin liefert alles. Geblieben: 3 Schicht-2-Command-Symlinks (`start`, `mega-plan`, `ecc-onboard`), `skills/learned`, `skills/system-architektur`, `rules/ecc-extras/`.
+- **Abgelöst (Plugins auf `false`):** claude-mem → memory-MCP + Instincts + /save-session · superpowers → ECC-Workflows · context7@official + feature-dev → ECC-Pendants. ⚠️ Greift erst nach **Neustart von Claude Code**.
+- **Hook-Scope:** global `minimal` + `ECC_GATEGUARD=off`; onboarded Projekte lokal `standard` (BestPractice, Werkstattauftraege_codex, Grow3_Automatisierung, Test-ECC, Verladelisten_Hafen). Eigenbau-`hooks.py` aus Werkstatt/WMS_Test entfernt.
+- **State-Sync aktiv (GLOBAL):** `~/.claude/settings.json` → SessionStart→`pre`, Stop/PreCompact→`post` über `~/.claude/state-sync/` (Symlink→Repo-Engine), guard-gated. Onboarded Projekte brauchen keine eigenen state-sync-Hooks.
+- **Backup:** kompletter Vor-Migrations-Stand unter `/root/harness-backup-20260610/` (inkl. geretteter Eigenarbeit `ecc-clone-eigenes/`).
+- **Unberührt:** RTK-Hook (`PreToolUse:Bash` global) · **Attribution-Policy** (Schicht-2-Override): Co-Authorship AKTIV, der Upstream-Hinweis „Attribution disabled globally" gilt hier bewusst nicht.
 
 ## 21 · Quellen & TL;DR
 
-**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Repo unter `ecc/`):
+**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Plugin-Cache `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`):
 
-- **Shortform-Guide:** https://x.com/affaanmustafa/status/2012378465664745795 (`ecc/the-shortform-guide.md`) — Setup & Philosophie
-- **Longform-Guide:** https://x.com/affaanmustafa/status/2014040193557471352 (`ecc/the-longform-guide.md`) — Token, Memory, Evals, Parallelisierung
-- **Security-Guide:** https://x.com/affaanmustafa/status/2033263813387223421 (`ecc/the-security-guide.md`) — Agent-Security, Pflichtlektüre
+- **Shortform-Guide:** https://x.com/affaanmustafa/status/2012378465664745795 (`the-shortform-guide.md`) — Setup & Philosophie
+- **Longform-Guide:** https://x.com/affaanmustafa/status/2014040193557471352 (`the-longform-guide.md`) — Token, Memory, Evals, Parallelisierung
+- **Security-Guide:** https://x.com/affaanmustafa/status/2033263813387223421 (`the-security-guide.md`) — Agent-Security, Pflichtlektüre
 - **Erfinder:** https://x.com/affaanmustafa (@affaanmustafa)
 
 **TL;DR — so arbeitest du „wie der Erfinder":**

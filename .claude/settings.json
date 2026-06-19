@@ -1,39 +1,4 @@
 {
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" pre"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post"
-          }
-        ]
-      }
-    ]
-  },
   "env": {
     "ECC_HOOK_PROFILE": "standard",
     "ECC_GATEGUARD": "off"

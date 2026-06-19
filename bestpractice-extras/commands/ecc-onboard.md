@@ -1,263 +1,110 @@
 ---
-description: Richtet das aktuelle Projekt vollständig für ECC-Workflows ein — Stack erkennen, Dry-Run zeigen, einmal bestätigen, dann ECC-Rules/Skills + PROJECT_RULES.md + state/ anlegen.
+description: Richtet ein Projekt schlank (plugin-only) für ECC ein — Stack erkennen, Dry-Run zeigen, einmal bestätigen, dann De-Cruft + Slim-Scaffold + maschinelle Abnahme. Funktioniert auch in fremden Repos.
 ---
 
 # /ecc-onboard
 
-Macht das **aktuelle Projekt** ECC-ready. Ein Command, ein OK. Führt vorhandene ECC- und
-BestPractice-Mechanik in einem Durchlauf zusammen:
-Stack-Detection → Dry-Run-Plan → **1× Bestätigung** → project-level Install → Projekt-Kontext füllen.
+Macht ein Projekt **schlank** ECC-ready. ECC-Core ist **global** (`ecc@ecc`) — ins Projekt kommt
+nur der minimale projektlokale Kern. Ein deterministisches Script erledigt die Mechanik; du
+verfeinerst danach `PROJECT_RULES.md` + `CLAUDE.md` mit echten Werten.
 
-ECC ist das führende Harness. Dieser Command ersetzt die früheren `/project-init`-(nur Dry-Run)
-und `/adopt-project`-(nur Templates) Einzelschritte als einen kompletten Setup-Button.
+Der schlanke Fußabdruck (alles andere kommt global vom Plugin):
+`.claude/settings.json` (env `ECC_HOOK_PROFILE=standard`, `ECC_GATEGUARD=off`) ·
+`state/{context,decisions,tasks,progress}.md` + `state/.ecc-managed` · `WORKING-CONTEXT.md` ·
+`PROJECT_RULES.md` · `CLAUDE.md` · `.claude/memory.md` · `SECURITY.md` · `.gitignore`.
+**Keine** vendored `.claude/rules/ecc`, `skills/ecc`, `commands/rpi`, `plugin.json`, keine
+Per-Projekt-Hooks (state-sync läuft **global**).
 
 ## Verwendung
 
 ```text
-/ecc-onboard                      # Auto-Detect, project-level (.claude/), Profil developer
-/ecc-onboard --profile core       # Schlankeres Profil erzwingen
-/ecc-onboard --skills continuous-learning-v2,security-review
-/ecc-onboard --dry-run            # Nur Plan zeigen, nichts schreiben
+/ecc-onboard                 # aktuelles Projekt, Dry-Run → 1× OK → Apply
+/ecc-onboard --project <dir> # anderes/fremdes Projekt
 ```
 
-## Feste Pfade (VPS srv1051228)
+## Voraussetzung (einmalig, global)
+
+state-sync ist global verankert: Symlink `~/.claude/state-sync` → Repo-Engine + globale
+SessionStart/Stop/PreCompact-Hooks in `~/.claude/settings.json`. Der Onboard-Preflight meldet,
+falls das fehlt. Wiederherstellen:
 
 ```bash
-ECC_REPO="/root/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1"    # globales Plugin ecc@ecc (nicht mehr vendored)
-EXTRAS="/root/projekte/Claude Code BestPractice/bestpractice-extras"
-TEMPLATES="$EXTRAS/templates"
-STACK_MAP="$ECC_REPO/config/project-stack-mappings.json"
-STACK_MAP_EXTRA="$EXTRAS/config/stack-mappings-extra.json"   # Schicht-2-Overlay (weitere Stacks)
-HARVEST="$EXTRAS/scripts/context-harvest/harvest.js"          # deterministische Auto-Kontext-Generierung
-AUDIT="$ECC_REPO/scripts/harness-audit.js"                    # Baseline-/Verify-Audit
+ln -sfn "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/state-sync" /root/.claude/state-sync
+# + globale Hooks in ~/.claude/settings.json (siehe docs/WO-LAEUFT-WAS.md)
 ```
-Wenn `ECC_REPO` nicht existiert, abbrechen — das Plugin `ecc@ecc` ist nicht installiert
-(mit `/plugin` prüfen/installieren).
 
-## Sicherheitsregeln
+**Continuous-Learning-Destillierer aktivieren (einmalig, global, gilt für alle Projekte).**
+Der `observe`-Hook erfasst Beobachtungen ab Profil `standard`, aber der LLM-Destillierer
+(Hintergrund-Observer, der Beobachtungen → Instincts verdichtet) ist per Default **aus**
+(`observer.enabled=false`). Ohne diesen Schalter sammeln sich nur Rohbeobachtungen, es
+entstehen **nie** Instincts. Onboard-Preflight soll prüfen und – falls fehlend – anlegen:
 
-1. **Nie ohne Bestätigung schreiben.** Erst Dry-Run, dann genau ein OK des Users abwarten.
-2. **Bestehendes nicht überschreiben.** Vorhandene `.claude/`, `CLAUDE.md`, `PROJECT_RULES.md`,
-   `state/` → inspizieren und **mergen/anhängen**, nie blind ersetzen. Vor jedem Überschreiben Diff zeigen.
-3. **ECC-Installer nutzen**, keine Dateien von Hand kopieren.
-4. **Keine Platzhalter** in PROJECT_RULES.md/state — nur verifizierte Fakten aus dem echten Code.
-5. **Keine Builds/Tests/Installs** ausführen, nur lesen (`Glob`/`Read`) und den ECC-Installer aufrufen.
-6. **ECC-Core unangetastet.** State-Sync wird rein **additiv** in der projekt-lokalen
-   `.claude/settings.json` registriert — niemals eine Datei im Plugin-Cache (`$ECC_REPO`) editieren.
+```bash
+CFG="${XDG_DATA_HOME:-$HOME/.local/share}/ecc-homunculus/config.json"
+# Soll-Zustand: {"version":"2.1","observer":{"enabled":true,"run_interval_minutes":5,"min_observations_to_analyze":20}}
+python3 -c "import json,os;p=os.path.expanduser('$CFG');print(json.load(open(p)).get('observer',{}).get('enabled'))" 2>/dev/null
+```
+
+Der Destillierer ruft danach alle 5 Min Haiku auf (laufende, geringe Kosten) und startet
+lazy beim nächsten Tool-Aufruf je Projekt (ab `min_observations_to_analyze`). Instincts dann
+via `/ecc:instinct-status` sichtbar, Cluster via `/ecc:evolve`.
 
 ## Ablauf
 
-### Schritt 1 — Stack erkennen (read-only)
-
-Projekt-Root lesen und Stack-Signale sammeln (überspringen was fehlt):
-- Paketmanager: `package.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`
-- Sprach-Manifeste: `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle(.kts)`, `Gemfile`, `composer.json`
-- Framework: `next.config.*`, `vite.config.*`, `tailwind.config.*`, `Dockerfile`, `docker-compose.yml`
-- Bestehende Config: `CLAUDE.md`, `.claude/`, `ecc-install.json`, `.harness-backup/`
-
-Daraus Sprach-/Framework-Komponenten ableiten (Mapping in `$STACK_MAP`):
-z.B. `lang:python`, `lang:typescript`, `lang:go`, `framework:django`, `framework:nextjs`.
-
-Zusätzlich `$STACK_MAP_EXTRA` (Schicht-2-Overlay) berücksichtigen — deckt **Angular, Vue, Nuxt,
-Svelte, FastAPI, Flask, Elixir/Phoenix, Terraform** ab. Bei gleicher `id` gewinnt der Overlay-
-Eintrag; der Core-`$STACK_MAP` bleibt unberührt (additiv darüber gemergt).
-Default-Profil: **`developer`** (bei unklarem/leerem Stack: **`core`**).
-
-### Schritt 2 — Dry-Run-Plan erzeugen
-
-**Wichtig:** `--target claude-project` installiert ins **aktuelle Arbeitsverzeichnis**. Daher
-IMMER aus dem **Zielprojekt-Root** laufen und das Script per **absolutem Pfad** aus dem ECC-Repo
-aufrufen — niemals `cd "$ECC_REPO"` (sonst landet alles in ECCs eigenem `.claude/`).
+### Schritt 1 — Dry-Run (read-only)
 
 ```bash
-cd "<ZIELPROJEKT-ROOT>"   # = das Projekt, das ECC-ready werden soll (i.d.R. das aktuelle cwd)
-# WICHTIG: install-plan.js NICHT für Dry-Run verwenden — es übergibt kein projectRoot
-# und installiert dann ins ECC-Repo statt ins Zielprojekt. Immer install-apply.js --dry-run nutzen:
-node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <profil> --dry-run --json
+node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>"
 ```
-Bei `--skills`/`--config` die entsprechenden Flags statt `--profile` verwenden.
 
-**Baseline-Audit (Verify-Vorbereitung):** `node "$AUDIT"` aus dem **Zielprojekt-Root** laufen
-lassen und den Score notieren (z.B. `7/39`). Das ist die Vergleichsbasis für das Verify-Audit in
-Schritt 8 — so wird „fehlender Kontext generiert" messbar statt nur behauptet.
+Zeigt Preflight (node, globale Engine/Hooks), erkannte **Altlasten** (Vendoring-Signatur →
+Backup-Plan) und den **Slim-Scaffold-Plan**. Schreibt nichts.
 
-### Schritt 3 — Einmal bestätigen (AskUserQuestion)
+### Schritt 2 — Einmal bestätigen (AskUserQuestion)
 
-Dem User kompakt zeigen:
-- erkannter Stack + Evidenz (welche Dateien)
-- gewähltes Profil + Sprach-Packs
-- was angelegt wird: `.claude/rules/ecc/` (common + Sprach-Pack), selektive `.claude/skills/ecc/`,
-  `PROJECT_RULES.md`, `state/{context,decisions,progress,tasks}.md` **plus** additive State-Sync-Hooks
-  in der projekt-lokalen `.claude/settings.json` (SessionStart→`pre`, Stop/PreCompact→`post`)
-- Warnungen zu bereits existierenden Dateien (→ Merge statt Überschreiben)
+Dem User kompakt zeigen: was nach `.harness-backup/<stamp>/` verschoben wird (reversibel) und
+was angelegt/gemergt wird. Genau **eine** Bestätigung.
 
-Genau **eine** Bestätigungsfrage. Bei `--dry-run`: hier stoppen, nichts schreiben.
-
-### Schritt 4 — ECC project-level installieren (nach OK)
+### Schritt 3 — Apply (nach OK)
 
 ```bash
-cd "<ZIELPROJEKT-ROOT>"
-node "$ECC_REPO/scripts/install-apply.js" --target claude-project --profile <profil>
+node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>" --apply
 ```
-Legt `.claude/rules/ecc/` + selektive `.claude/skills/ecc/` im Projekt an (managed namespace).
-Verifizieren: `Install root` in der Ausgabe muss auf das **Zielprojekt** zeigen, nicht auf `$ECC_REPO/.claude`.
 
-### Schritt 4b — State-Sync-Hooks registrieren (additiv, ECC-Core unberührt)
+Führt aus: De-Cruft (move → Backup) → Slim-Scaffold (settings env-merge + state-sync-Hook-Strip,
+`state/`, Sentinel, `.gitignore`) → `consumer-scaffold.js` → `harvest.js` (Auto-Kontext aus
+README/git/TODO) → initialer PRE-Sync (`WORKING-CONTEXT.md`) → **`onboard-verify.js`** (Abnahme).
+Idempotent: Re-Run mergt, überschreibt keine User-Inhalte.
 
-Den Hybrid-Loop verdrahten: `state/` (Quelle der Wahrheit) ⇄ `WORKING-CONTEXT.md` (Loop-Futter).
-Registrierung erfolgt **ausschließlich** in der projekt-lokalen `.claude/settings.json` — nie in ECC.
+### Schritt 4 — `PROJECT_RULES.md` + `CLAUDE.md` verfeinern (LLM)
 
-1. **`.claude/settings.json` lesen/anlegen** und die drei Lifecycle-Hooks **mergen** (vorhandene
-   Hooks-Arrays erweitern, nicht ersetzen). Idempotenz: nur eintragen, falls der `state-sync.js`-Aufruf
-   noch nicht vorhanden ist.
+Das Script legt beide aus Vorlagen an. Jetzt mit **echten, verifizierten** Werten füllen
+(keine `[Platzhalter]`, kein `TODO`): Stack/Runtime/Befehle (build/test/lint) aus echtem Code,
+Sensitive Areas per Grep auf Telltale-Imports (`stripe`, `jwt`, `bcrypt`, `migration`),
+3–5 konkrete Projektregeln. Vorhandene Dateien nur mit Diff+OK ändern. Danach `onboard-verify`
+erneut laufen lassen — die Platzhalter-Warnung (7b) muss verschwinden.
 
-   ```jsonc
-   {
-     "hooks": {
-       "SessionStart": [{ "matcher": "*", "hooks": [{ "type": "command",
-         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" pre" }] }],
-       "Stop":        [{ "matcher": "*", "hooks": [{ "type": "command",
-         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post" }] }],
-       "PreCompact":  [{ "matcher": "*", "hooks": [{ "type": "command",
-         "command": "node \"$CLAUDE_PROJECT_DIR/bestpractice-extras/scripts/state-sync/state-sync.js\" post" }] }]
-     }
-   }
-   ```
-
-   **ECC-Hooks projekt-lokal aktivieren** (offizielle Profil-Mechanik): Global steht
-   `~/.claude/settings.json` → `env.ECC_HOOK_PROFILE=minimal` (Nicht-ECC-Projekte zahm).
-   Damit ein onboarded Projekt die volle ECC-Pipeline (quality-gate, console-warn, observe,
-   governance, metrics …) erhält, im **`env`-Block** der Projekt-`settings.json` das Profil auf
-   **`standard`** setzen (überschreibt global; gateguard bleibt via `ECC_GATEGUARD=off` bewusst aus):
-
-   ```jsonc
-   {
-     "env": {
-       "ECC_HOOK_PROFILE": "standard",
-       "ECC_GATEGUARD": "off"
-     }
-   }
-   ```
-
-   Idempotent mergen: `env` anlegen, falls fehlend; `ECC_HOOK_PROFILE=standard` + `ECC_GATEGUARD=off`
-   setzen. **Kein** `ECC_DISABLED_HOOKS`, **kein** vendored Core, **kein** eigener `hooks.py` —
-   das Plugin liefert die Hooks, das Profil steuert sie. Wirkt erst in einer **frischen Session**.
-   Details: `docs/WO-LAEUFT-WAS.md`.
-
-   Liegt `bestpractice-extras/` **nicht** im Zielprojekt (Fremd-Repo), den absoluten Pfad zum
-   BestPractice-Repo verwenden:
-   `node "$EXTRAS/scripts/state-sync/state-sync.js" pre|post --project "$CLAUDE_PROJECT_DIR"`.
-
-2. **`state/.sync/` ins Projekt-`.gitignore`** aufnehmen (Snapshot-Cache, kein VCS) — nur anhängen,
-   falls noch nicht vorhanden.
-
-3. **Initialen PRE-Sync** ausführen, damit `WORKING-CONTEXT.md` sofort existiert (nach Schritt 5,
-   sobald `state/` befüllt ist):
-
-   ```bash
-   node "$EXTRAS/scripts/state-sync/state-sync.js" pre --project "<ZIELPROJEKT-ROOT>"
-   ```
-
-   Erwartung: `[state-sync] PRE ok: WORKING-CONTEXT.md aus state/ generiert`. Der No-op-Guard
-   überspringt still, falls (noch) kein `state/` existiert.
-
-### Schritt 4c — Consumer-Konformität & Modell-Override (Schicht 2, NACH dem Apply)
-
-Der managed Installer legt die ECC-Surfaces (`.claude/rules`, `skills`, `agents`, …) an, **nicht**
-aber die Consumer-Artefakte, die der `harness-audit` als ECC-Konformität wertet. Dieses Script
-schließt die Lücke — idempotent und additiv (überschreibt nie bestehende User-Dateien):
+### Schritt 5 — Abnahme
 
 ```bash
-node "$EXTRAS/scripts/onboard/consumer-scaffold.js" --project "<ZIELPROJEKT-ROOT>"
-# --dry-run zeigt nur an, schreibt nichts
+node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard-verify.js" --project "<ZIELPROJEKT-ROOT>"
 ```
 
-Legt an (nur falls fehlend) und deckt damit diese Audit-Checks:
-- `.claude/memory.md` → **consumer-memory-notes**
-- `SECURITY.md` → **consumer-security-policy**
-- `.gitignore`-Secret-Block (`.env`, `*.pem`, …) → **consumer-secret-hygiene**
+**Fertig = alle Pflicht-Checks grün** (Exit 0). Berichten: was verschoben/angelegt wurde,
+Audit-Score, offene Punkte, nächster Schritt (i.d.R. `/plan` → `/feature-dev`).
+**Wirkung der globalen Hooks** greift erst in einer **frischen Session**.
 
-> **Keine projekt-lokale `.mcp.json`.** Der Audit-Check **consumer-project-config** akzeptiert
-> `.mcp.json` **oder** `.claude/settings.json` (Schritt 4b legt Letztere ohnehin an). Das Plugin
-> `ecc@ecc` liefert die MCP-Server bereits **global** — eine Projekt-`.mcp.json` mit denselben
-> Servern würde sie doppelt starten (doppelte Tools = Token-Verschwendung). Daher bewusst nicht kopiert.
+## Sicherheitsregeln
 
-**Modell-Override (ECC-Matrix: Security-kritisch → Opus):** patcht das project-level
-`.claude/agents/security-reviewer.md` von `model: sonnet` auf `opus`. **Muss nach Schritt 4
-laufen** — der managed Re-Sync setzt den Core-Default (`sonnet`) sonst zurück. Bei erneutem
-`/ecc-onboard` daher immer auch dieses Script erneut ausführen (idempotent).
-
-> Bewusst NICHT erzeugt: `tests/`, CI-Workflows, GitHub-Templates — das ist echtes Projekt-Setup
-> und wird nicht künstlich angelegt. Bei leerem Stack bleibt der Audit-Score daher unter 39/39
-> (typisch ~18/39); mit echtem Code/Tests/CI/Repo steigt er entsprechend.
-
-### Schritt 5 — Projekt-Kontext füllen (Routine aus adopt-project)
-
-Templates aus `$TEMPLATES` ins Projekt kopieren. Dann **deterministisch vorbefüllen** (Auto-Kontext):
-
-```bash
-node "$HARVEST" --project "<ZIELPROJEKT-ROOT>"   # NACH dem Kopieren von state/
-```
-Erzeugt verlustfreie HARVEST-Marker-Blöcke aus **echtem Code**: `state/context.md`
-(`### Current Truth` aus README-Erstabsatz + `git log -20`), `state/tasks.md` (`### Now` aus
-TODO/FIXME mit `file:line`) und — falls vorhanden — `PROJECT_RULES.md` (`## Sensitive Areas` aus
-Telltale-Imports stripe/jwt/bcrypt/migration). **Idempotent** (Re-Run dedupliziert) und
-**verlustfrei** (Mensch-Inhalt außerhalb der Marker bleibt). `--dry-run` zeigt nur an.
-
-Anschließend die generierten Blöcke mit **echten** Werten prüfen/verfeinern (nicht ersetzen):
-- `PROJECT_RULES.template.md` → `PROJECT_RULES.md`: alle `[Platzhalter]` durch verifizierte
-  Werte ersetzen; nicht zutreffende Abschnitte löschen. Sensitive Areas (auth, payments,
-  migrations, crypto) per Grep auf Telltale-Imports (`stripe`, `jwt`, `bcrypt`, `migration`)
-  identifizieren. 3–5 konkrete Projekt-Regeln aus echten Code-Mustern ableiten.
-- `state/{context,decisions,progress,tasks}.md` aus `$TEMPLATES/state/` kopieren. Diese Templates
-  enthalten **Marker-Sektionen** (`###`-Sub-Headings + HTML-Kommentar-Guidance); die Struktur
-  **erhalten**, nur Inhalte ergänzen:
-  - `context.md`: `### Purpose` aus README + Manifest-Beschreibung (2–3 Sätze), `### Current Truth`
-    aus `git log -20 --oneline` + Architektur-Kernfakten.
-  - `tasks.md`: `### Now`/`### Next` aus echten offenen TODOs/Issues/Ist-Zustand befüllen
-    (Grep nach `TODO`/`FIXME`, offene Punkte aus README). Neu = Grundgerüst lassen.
-  - `decisions.md`/`progress.md`: bei Bestand befüllen, sonst leeres Gerüst belassen.
-  Der State-Sync liest nur diese vier Dateien; die HTML-Kommentare bleiben im generierten
-  `WORKING-CONTEXT.md` unsichtbar.
-- Optionale projekt-spezifische `.claude/rules/<area>.md` (mit `paths:`-Frontmatter) **nur** für
-  Bereiche, die das Projekt wirklich hat (z.B. `api-routes.md`, `database.md`, `testing.md`).
-
-### Schritt 6 — Bestehenden Kontext mergen
-
-Wenn `.harness-backup/<ts>/` oder altes `CLAUDE.md`/`state/` existiert: custom Inhalte (keine
-generischen Harness-Regeln) in `PROJECT_RULES.md` „Project-Specific Rules" bzw. die neuen
-`state/`-Dateien mergen. Nichts kommentarlos verwerfen.
-
-### Schritt 7 — CLAUDE.md-Starter (Standard)
-
-Wenn keine projekt-`CLAUDE.md` (oder `AGENTS.md`) existiert: einen minimalen Starter mit
-erkannten build/test/lint/dev-Befehlen anlegen — das erfüllt **consumer-instructions** (3pt) und
-gibt Claude den projekt-spezifischen Arbeitsvertrag. Vorhandene `CLAUDE.md` nie ohne Diff+OK
-ersetzen. Bei leerem Stack einen knappen Starter (Zweck + 5-Phasen-Workflow + Platzhalter für
-build/test/lint, bis ein Stack vorliegt).
-
-### Schritt 8 — Report
-
-**Verify-Audit (Delta):** `node "$AUDIT"` erneut aus dem Zielprojekt-Root laufen lassen und den
-**Score-Delta** gegen die Baseline aus Schritt 2 ausweisen (z.B. `7/39 → 30/39`). Belegt konkret,
-dass Kontext generiert wurde und die Custom-Tools/Hooks greifen.
-
-Berichten: welche Dateien angelegt/gefüllt, welche Werte verifiziert vs. erfragt, ob die
-State-Sync-Hooks registriert wurden und ob der initiale PRE-Sync `WORKING-CONTEXT.md` erzeugt hat,
-offene Fragen (max 5, nach Wichtigkeit), nächster Schritt (i.d.R.: PROJECT_RULES.md prüfen,
-dann mit `/plan` → `/feature-dev` loslegen).
-
-## Idempotenz
-
-Erneuter Aufruf merged, überschreibt nichts kommentarlos. Der ECC-Installer trackt den
-project-level State; bereits installierte Surfaces werden inkrementell aktualisiert. Die
-State-Sync-Hooks werden nur eingetragen, falls der `state-sync.js`-Aufruf noch fehlt.
+1. **Nie ohne Bestätigung schreiben** (erst Dry-Run, dann ein OK).
+2. **De-Cruft verschiebt** nach `.harness-backup/` — nie Hard-Delete; reversibel.
+3. **Kein Vendoring**: kein `install-apply.js`, kein `.claude/rules/ecc` ins Projekt.
+4. **Keine Platzhalter** in `PROJECT_RULES.md` — nur verifizierte Fakten aus echtem Code.
+5. **ECC-Core unberührt**: nur Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2, nie das Plugin patchen.
 
 ## Verwandt
 
-- `/project-init` — nur Dry-Run-Inspektion (ECC, weiterhin verfügbar)
-- `/ecc-guide` — interaktive Komponenten-Discovery vor Installation
-- `bestpractice-extras/scripts/state-sync/` — State-Sync-Adapter (PRE/POST, `selftest.js`)
-- `bestpractice-extras/scripts/onboard/consumer-scaffold.js` — Consumer-Konformität + security-reviewer→opus (Schritt 4c)
-- `scripts/install-plan.js` / `scripts/install-apply.js` — deterministische Plan-/Apply-Operationen
-- `config/project-stack-mappings.json` — Stack→Rules/Skills-Hinweise
+- `bestpractice-extras/scripts/onboard/onboard.js` — deterministischer Orchestrator
+- `bestpractice-extras/scripts/onboard/onboard-verify.js` — maschinelle Abnahme-Suite
+- `bestpractice-extras/scripts/state-sync/` — Engine (global verlinkt) + `selftest.js`
+- `docs/WO-LAEUFT-WAS.md` — Landkarte (Single Source), state-sync global

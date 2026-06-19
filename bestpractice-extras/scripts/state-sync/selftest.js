@@ -162,6 +162,25 @@ function testGuards() {
     assert.strictEqual(r2.skipped, true, 'Projekt ohne state/ muss uebersprungen werden');
     assert.ok(!fs.existsSync(path.join(plain, 'WORKING-CONTEXT.md')), 'Projekt ohne state/ darf nichts bekommen');
     ok('Guard: Projekt ohne state/ uebersprungen');
+
+    // Guard 3: fremdes state/ (z.B. Terraform) ohne Sentinel und ohne die 4 STATE_FILES
+    // wird uebersprungen -> kein false-positive, seit der Hook GLOBAL feuert.
+    const tf = path.join(base, 'tf-project');
+    fs.mkdirSync(path.join(tf, 'state'), { recursive: true });
+    fs.writeFileSync(path.join(tf, 'state', 'terraform.tfstate'), '{}', 'utf8');
+    const r3 = pre.run(['--project', tf]);
+    assert.strictEqual(r3.skipped, true, 'fremdes state/ (Terraform) muss uebersprungen werden');
+    assert.ok(!fs.existsSync(path.join(tf, 'WORKING-CONTEXT.md')), 'fremdes state/ darf keine WORKING-CONTEXT.md bekommen');
+    ok('Guard: fremdes state/ (kein Sentinel, nicht 4 Dateien) uebersprungen');
+
+    // Guard 4: Sentinel allein markiert ein leeres state/ ausdruecklich als ECC-verwaltet.
+    const sent = path.join(base, 'sentinel-project');
+    fs.mkdirSync(path.join(sent, 'state'), { recursive: true });
+    fs.writeFileSync(path.join(sent, 'state', '.ecc-managed'), 'x\n', 'utf8');
+    const r4 = pre.run(['--project', sent]);
+    assert.strictEqual(r4.skipped, false, 'Sentinel muss state-sync aktivieren');
+    assert.ok(fs.existsSync(path.join(sent, 'WORKING-CONTEXT.md')), 'Sentinel-Projekt muss WORKING-CONTEXT.md bekommen');
+    ok('Guard: Sentinel state/.ecc-managed aktiviert state-sync');
   } finally {
     rmrf(base);
   }

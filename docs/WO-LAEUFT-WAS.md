@@ -30,7 +30,8 @@
 |---|---|---|---|
 | **ECC-Plugin** (Core: Agents, Skills, Commands, Hooks) | `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` | **Single Source** des ECC-Verhaltens | ✅ aktiv |
 | **Globale Settings** | `~/.claude/settings.json` | `env.ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off` → zähmt Hooks in Nicht-ECC-Projekten | ✅ umgestellt (2026-06-05) |
-| **ECC-Rules global** | ~~`~/.claude/rules/ecc/`~~ | **ENTFERNT 2026-06-10** — 117 Dateien aller Sprachen wurden in **jede** Session injiziert (~Auto-Compact-Ursache). Rules kommen jetzt nur projekt-lokal für die relevante Sprache (`/ecc-onboard`) | ✅ entfernt |
+| **State-Sync global** | `~/.claude/state-sync/` (Symlink → Repo-Engine) + Hooks `SessionStart/Stop/PreCompact` in `~/.claude/settings.json` | EIN globaler Hook; der Guard (`state/.ecc-managed` ODER 4 STATE_FILES) macht ihn in Nicht-ECC-Projekten zum No-op → onboarded Projekte brauchen **keine** eigenen state-sync-Hooks mehr | ✅ aktiv |
+| **ECC-Rules global** | ~~`~/.claude/rules/ecc/`~~ | **ENTFERNT 2026-06-10** — 117 Dateien aller Sprachen wurden in **jede** Session injiziert (~Auto-Compact-Ursache). Rules kommen nun **gar nicht** ins Projekt (slim/plugin-only) — alle Rules liefert global das Plugin `ecc@ecc` | ✅ entfernt |
 | **Eigene Rules** | `~/.claude/rules/ecc-extras/` | karpathy-principles + attribution-policy (Schicht 2) | ✅ bleibt |
 | **Globale Commands** | `~/.claude/commands/` | **nur noch 3 Symlinks** auf Schicht-2-Quellen: `start`, `mega-plan`, `ecc-onboard`. Die 79 ECC-Command-Kopien sind ENTFERNT (Plugin liefert sie) | ✅ entschlackt |
 | **Hooks-Kopie** | ~~`~/.claude/hooks/`~~ | **ENTFERNT 2026-06-10** — tote 48K-Kopie der Plugin-Hooks, wurde nirgends geladen | ✅ entfernt |
@@ -49,8 +50,7 @@
 | Was | Pfad | Zweck | Schicht |
 |---|---|---|---|
 | **Projekt-Settings** | `.claude/settings.json` → `env.ECC_HOOK_PROFILE=standard` | reaktiviert die volle ECC-Pipeline **nur hier** (überschreibt global `minimal`) | offiziell |
-| **State-Sync-Hooks** | `.claude/settings.json` → SessionStart/Stop/PreCompact → `state-sync.js` | spiegelt `state/` ⇄ `WORKING-CONTEXT.md` | **Schicht 2** |
-| **State** | `state/` (context, decisions, progress, tasks) + `WORKING-CONTEXT.md` | Projekt-Gedächtnis | **Schicht 2** |
+| **State** | `state/` (context, decisions, progress, tasks) + `state/.ecc-managed` (Sentinel) + `WORKING-CONTEXT.md` | Projekt-Gedächtnis; Sentinel markiert das `state/` als ECC-verwaltet (Guard) | **Schicht 2** |
 | **Projekt-Regeln** | `PROJECT_RULES.md` | projektspezifische Vorgaben | **Schicht 2** |
 | **MCP-Server** | `.mcp.json` | projektrelevante MCPs | offiziell |
 
@@ -82,8 +82,9 @@ Liegen in `bestpractice-extras/` — **additive Wrapper**, kein Patch am Core:
 
 | Erweiterung | Zweck |
 |---|---|
-| `scripts/state-sync/` | `state/` ⇄ `WORKING-CONTEXT.md` (SessionStart/Stop/PreCompact) |
-| `commands/onboard/ecc-onboard.md` + `scripts/onboard/consumer-scaffold.js` | Projekt ECC-ready machen (env-Block + state/ + PROJECT_RULES) — **kein** Core-Copy |
+| `scripts/state-sync/` | Engine `state/` ⇄ `WORKING-CONTEXT.md`; **global** via Symlink `~/.claude/state-sync/` verlinkt (Hooks in `~/.claude/settings.json`) |
+| `scripts/onboard/onboard.js` + `onboard-verify.js` + `consumer-scaffold.js` | schlankes Onboarding (De-Cruft → Slim-Scaffold → maschinelle Abnahme) — **kein** Vendoring, funktioniert in Fremd-Repos |
+| `commands/ecc-onboard.md` | `/ecc-onboard`: Dry-Run → 1× OK → `onboard.js --apply` + PROJECT_RULES/CLAUDE.md verfeinern |
 | `scripts/mgrep/` | semantische Suche (Mixedbread) |
 | `scripts/build-docs/` | Office-Snapshots aus Markdown |
 | `commands/start.md`, `mega-plan.md` | Tagesstart, RPI-Berater |
@@ -110,9 +111,9 @@ Liegen in `bestpractice-extras/` — **additive Wrapper**, kein Patch am Core:
 
 | Quelle | Hooks |
 |---|---|
-| `~/.claude/settings.json` | PreToolUse `rtk hook claude` (Token-Optimierung) — sonst nichts |
+| `~/.claude/settings.json` | PreToolUse `rtk hook claude` (Token-Optimierung) **+ globaler state-sync** (SessionStart/Stop/PreCompact → `~/.claude/state-sync/state-sync.js`, guard-gated) |
 | ECC-Plugin (`ecc@ecc`) | alle 28 Lifecycle-Hooks, profilgesteuert via `ECC_HOOK_PROFILE` (inkl. `pre:/post:observe` = Continuous Learning bei `standard`/`strict`) |
-| Projekt-`settings.json` (onboarded) | state-sync (SessionStart/Stop/PreCompact, Schicht 2) |
+| Projekt-`settings.json` (onboarded) | **nur** `env.ECC_HOOK_PROFILE=standard` (+ `ECC_GATEGUARD=off`) — keine eigenen Hooks mehr (state-sync ist global) |
 
 ---
 

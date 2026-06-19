@@ -35,3 +35,6 @@ ecc/.claude/
 
 # State-Sync-Snapshot-Cache (Hybrid-Harness) — nur lokaler Delta-Vergleich, kein VCS
 state/.sync/
+
+# --- ECC slim onboarding ---
+.harness-backup/

@@ -2,10 +2,9 @@
 /**
  * consumer-scaffold.js — Schicht-2-Ergänzung zum ECC-Onboarding.
  *
- * Legt im Zielprojekt die Consumer-Konformitäts-Artefakte an, die der ECC-Installer
- * (managed Surfaces) NICHT erzeugt, und wendet die Schicht-2-Modell-Overrides an.
- * Alles idempotent und additiv — bestehende User-Dateien werden NIE überschrieben.
- * ECC-Core (`ecc/`) bleibt unberührt.
+ * Legt im Zielprojekt die Consumer-Konformitäts-Artefakte an, die das globale
+ * Plugin nicht pro Projekt mitbringt. Alles idempotent und additiv — bestehende
+ * User-Dateien werden NIE überschrieben.
  *
  * Anlegen (nur falls fehlend):
  *   - .claude/memory.md   → consumer-memory-notes (durable notes)
@@ -17,9 +16,9 @@
  * ecc@ecc liefert die MCP-Server bereits global — eine Projekt-.mcp.json mit denselben Servern
  * würde sie doppelt starten (doppelte Tools = Token-Verschwendung).
  *
- * Modell-Override (Schicht-2, nach managed Apply):
- *   - .claude/agents/security-reviewer.md: model: sonnet → opus
- *     (ECC-Matrix: Security-kritisch → Opus; der managed Core-Default ist sonnet)
+ * KEIN security-reviewer-Modell-Patch mehr: Im slim/plugin-only-Modell gibt es keine
+ * projekt-lokale `.claude/agents/security-reviewer.md`. Der Opus-Override (ECC-Matrix:
+ * Security-kritisch → Opus) liegt global in `~/.claude/agents/security-reviewer.md`.
  *
  * Aufruf:
  *   node consumer-scaffold.js --project <ZIELPROJEKT-ROOT> [--dry-run]
@@ -124,27 +123,6 @@ function ensureGitignoreSecrets(projectRoot, dryRun, results) {
   results.created.push('.gitignore (secret patterns)');
 }
 
-// Patcht das managed project-level security-reviewer.md auf Opus (idempotent).
-// Muss NACH dem managed install-apply laufen, da der Re-Sync sonst auf sonnet zurücksetzt.
-function patchSecurityReviewerModel(projectRoot, dryRun, results) {
-  const f = path.join(projectRoot, '.claude', 'agents', 'security-reviewer.md');
-  if (!fs.existsSync(f)) { results.skipped.push('security-reviewer model (Datei fehlt)'); return; }
-  const text = fs.readFileSync(f, 'utf8');
-  // Nur den YAML-Frontmatter-Block (zwischen den führenden `---`-Delimitern) patchen,
-  // damit kein `model:` im Markdown-Body (z.B. Code-Beispiel) getroffen wird.
-  const fm = text.match(/^---\n([\s\S]*?)\n---/);
-  if (!fm) { warn('security-reviewer.md: kein YAML-Frontmatter gefunden'); return; }
-  // Modellwert auf bekannte Tiers verengen (kein gieriges `.+`).
-  const MODEL_LINE = /^(model:[ \t]*)(claude-[a-z0-9-]+|sonnet|haiku|opus)[ \t]*$/m;
-  const m = fm[1].match(MODEL_LINE);
-  if (!m) { warn('security-reviewer.md: kein model-Feld im Frontmatter'); return; }
-  if (/opus/i.test(m[2])) { results.skipped.push('security-reviewer model (bereits opus)'); return; }
-  if (dryRun) { results.wouldCreate.push('security-reviewer model → opus'); return; }
-  const patchedFm = fm[1].replace(MODEL_LINE, '$1opus');
-  fs.writeFileSync(f, text.replace(fm[0], `---\n${patchedFm}\n---`), 'utf8');
-  results.created.push('security-reviewer model → opus');
-}
-
 function main() {
   const args = parseArgs(process.argv);
   const projectRoot = path.resolve(args.project);
@@ -156,7 +134,6 @@ function main() {
   ensureFile(path.join(projectRoot, '.claude', 'memory.md'), memoryStub(projectName), args.dryRun, results, '.claude/memory.md');
   ensureFile(path.join(projectRoot, 'SECURITY.md'), securityStub(projectName), args.dryRun, results, 'SECURITY.md');
   ensureGitignoreSecrets(projectRoot, args.dryRun, results);
-  patchSecurityReviewerModel(projectRoot, args.dryRun, results);
 
   if (results.created.length) log(`angelegt: ${results.created.join(', ')}`);
   if (results.wouldCreate.length) log(`WÜRDE anlegen: ${results.wouldCreate.join(', ')}`);
