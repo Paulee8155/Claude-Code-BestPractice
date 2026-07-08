@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install-vps.sh — Reproduzierbarer, RTK-sicherer VPS-weiter Rollout des Harness.
 #
-# OFFIZIELLE ECC-ARCHITEKTUR (Upstream 2.0.0-rc.1):
+# OFFIZIELLE ECC-ARCHITEKTUR (Upstream 2.0.0):
 #   ECC wird als EIN globales Plugin (ecc@ecc) installiert — NICHT ins Repo vendored,
 #   NICHT per install-apply gestackt. Dieses Skript setzt das installierte Plugin voraus
 #   und (1) verteilt die Rules aus dem Plugin-Cache (Plugins verteilen rules nicht selbst,
@@ -28,7 +28,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXTRAS_DIR="$REPO_DIR/bestpractice-extras"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
-PLUGIN_DIR="${ECC_PLUGIN_DIR:-$CLAUDE_HOME/plugins/cache/ecc/ecc/2.0.0-rc.1}"
+PLUGIN_DIR="${ECC_PLUGIN_DIR:-$CLAUDE_HOME/plugins/cache/ecc/ecc/2.0.0}"
 
 DRY_RUN=0
 HARDEN=0

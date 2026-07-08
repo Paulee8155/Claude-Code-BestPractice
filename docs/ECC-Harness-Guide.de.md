@@ -1,7 +1,7 @@
 # Engineering Harness — ECC × BestPractice
 
 > **Das fusionierte, VPS-weite Claude-Code-Harness — Bedienungsanleitung.**
-> ECC 2.0.0-rc.1 als **globales Plugin** `ecc@ecc` (führend) · Schicht-2-Extras im Repo · RTK-sicher.
+> ECC 2.0.0 als **globales Plugin** `ecc@ecc` (führend) · Schicht-2-Extras im Repo · RTK-sicher.
 > Seit der Plugin-only-Migration (2026-06-10): keine vendored `ecc/`-Kopie mehr, claude-mem/superpowers deaktiviert.
 >
 > **Halte mich offen.** Dieses Dokument ist dein Nachschlagewerk neben dem Code: wann welcher Command, welches Modell, welcher MCP. Basiert auf den Guides von @affaanmustafa (X-Links am Ende).
@@ -14,7 +14,7 @@
 
 Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
-- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, Continuous Learning, Security-Scanning, 6 mitgebrachte MCP-Server. Läuft als **globales Plugin** `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0-rc.1` (Cache: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`) — damit in JEDEM Projekt verfügbar, ohne Kopien im Home oder Repo.
+- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, Continuous Learning, Security-Scanning, 6 mitgebrachte MCP-Server. Läuft als **globales Plugin** `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0` (Cache: `~/.claude/plugins/cache/ecc/ecc/2.0.0/`) — damit in JEDEM Projekt verfügbar, ohne Kopien im Home oder Repo.
 - **BestPractice-Extras** — die wenigen einzigartigen Stärken deines alten Harness, die ECC ergänzen: `/ecc-onboard` (One-Shot-Projekt-Setup), das `state/`-Pattern, der State-Sync, die RPI-Berater und die Karpathy-Prinzipien.
 
 **Philosophie in einem Satz:** „Konfiguration ist Fine-Tuning, nicht Architektur." Baue wiederverwendbare Muster, halte das Kontextfenster sauber, delegiere an das billigste ausreichende Modell, verifiziere mit Evidenz — und lass Komfort nie die Sicherheit überholen.
@@ -25,7 +25,7 @@ Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
 ECC läuft als globales **Plugin** und ist damit in JEDEM Projekt auf der VPS verfügbar (WMS, Jarvis, n8n, Werkstatt …). Das Setup ist bewusst schlank und reproduzierbar:
 
-- **Plugin-only:** Single Source ist `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` — keine Kopien mehr unter `~/.claude/{rules,hooks,skills,commands}` und keine vendored `ecc/` im Repo. Update = `extraKnownMarketplaces.ecc.source.ref` in `~/.claude/settings.json` auf neuen Tag setzen.
+- **Plugin-only:** Single Source ist `~/.claude/plugins/cache/ecc/ecc/2.0.0/` — keine Kopien mehr unter `~/.claude/{rules,hooks,skills,commands}` und keine vendored `ecc/` im Repo. Update = `extraKnownMarketplaces.ecc.source.ref` in `~/.claude/settings.json` auf neuen Tag setzen.
 - **RTK bleibt König:** Der globale `PreToolUse:Bash`-Hook (RTK, 60–90 % Token-Ersparnis) wurde NICHT angefasst.
 - **Hook-Zähmung per Profil:** global `ECC_HOOK_PROFILE=minimal` (Nicht-ECC-Projekte ruhig), projekt-lokal `standard` in onboardeten Projekten (volle Pipeline). Details §14.
 - **Backup:** kompletter Vor-Migrations-Stand unter `/root/harness-backup-20260610/`.
@@ -53,7 +53,7 @@ ECC läuft als globales **Plugin** und ist damit in JEDEM Projekt auf der VPS ve
 | MCP | Externe Dienste als Tools (memory, context7, github, exa, playwright, sequential-thinking) | Plugin `.mcp.json` | pro Session |
 | Instincts | Gelernte Muster aus deinen Sessions | ~/.claude (continuous-learning), /instinct-status | wächst mit dir |
 
-*(Plugin-Pfad jeweils: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`.)*
+*(Plugin-Pfad jeweils: `~/.claude/plugins/cache/ecc/ecc/2.0.0/`.)*
 
 **Wichtigste Regel:** Die durable Logik gehört in Skills. Commands sind nur der bequeme Einstieg. Was du zum dritten Mal tippst → mach eine Skill draus (`/skill-create`).
 
@@ -406,7 +406,7 @@ Kernhaltung: Baue so, als würde das Modell irgendwann etwas Feindliches lesen, 
 
 ```
 # Plugin-Pfad (Single Source, read-only behandeln):
-ECC=~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1
+ECC=~/.claude/plugins/cache/ecc/ecc/2.0.0
 
 node "$ECC/scripts/harness-audit.js"   # Repo-Integritäts-Audit
 node "$ECC/scripts/ecc.js" doctor      # Health-Check
@@ -467,7 +467,7 @@ Für vage/vielschichtige Ziele: holt mehrere read-only Experten-Perspektiven par
 
 Die Migration auf **Plugin-only** ist abgeschlossen (Commits `d99f3d0` + `8293011`):
 
-- **ECC-Core = globales Plugin** `ecc@ecc` 2.0.0-rc.1, gepinnt auf GitHub `affaan-m/ECC` Tag `v2.0.0-rc.1` (`extraKnownMarketplaces` in `~/.claude/settings.json`). Vendored `ecc/` im Repo und der 213-MB-Klon `/root/projekte/ECC` sind gelöscht.
+- **ECC-Core = globales Plugin** `ecc@ecc` 2.0.0, gepinnt auf GitHub `affaan-m/ECC` Tag `v2.0.0` (`extraKnownMarketplaces` in `~/.claude/settings.json`). Vendored `ecc/` im Repo und der 213-MB-Klon `/root/projekte/ECC` sind gelöscht.
 - **ECC-Duplikate im Home entfernt:** globale Rules- (117 Dateien, verursachten Auto-Compact), Hooks- und Skills-Kopien sind weg — das Plugin liefert alles. Geblieben: 3 Schicht-2-Command-Symlinks (`start`, `mega-plan`, `ecc-onboard`), `skills/learned`, `skills/system-architektur`, `rules/ecc-extras/`.
 - **Abgelöst (Plugins auf `false`):** claude-mem → memory-MCP + Instincts + /save-session · superpowers → ECC-Workflows · context7@official + feature-dev → ECC-Pendants. ⚠️ Greift erst nach **Neustart von Claude Code**.
 - **Hook-Scope:** global `minimal` + `ECC_GATEGUARD=off`; onboarded Projekte lokal `standard` (BestPractice, Werkstattauftraege_codex, Grow3_Automatisierung, Test-ECC, Verladelisten_Hafen). Eigenbau-`hooks.py` aus Werkstatt/WMS_Test entfernt.
@@ -477,7 +477,7 @@ Die Migration auf **Plugin-only** ist abgeschlossen (Commits `d99f3d0` + `829301
 
 ## 21 · Quellen & TL;DR
 
-**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Plugin-Cache `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`):
+**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Plugin-Cache `~/.claude/plugins/cache/ecc/ecc/2.0.0/`):
 
 - **Shortform-Guide:** https://x.com/affaanmustafa/status/2012378465664745795 (`the-shortform-guide.md`) — Setup & Philosophie
 - **Longform-Guide:** https://x.com/affaanmustafa/status/2014040193557471352 (`the-longform-guide.md`) — Token, Memory, Evals, Parallelisierung

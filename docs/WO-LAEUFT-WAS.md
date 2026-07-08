@@ -1,7 +1,7 @@
 # 🗺️ Wo läuft was — ECC-Harness-Landkarte
 
 > **Single Source of Truth** für die Frage „wo liegt was, global vs. lokal, und warum".
-> Richtet sich nach der **offiziellen ECC-Architektur** (Gründer Affaan Mustafa, Upstream `2.0.0-rc.1`):
+> Richtet sich nach der **offiziellen ECC-Architektur** (Gründer Affaan Mustafa, Upstream `2.0.0`):
 > **ein globales Plugin + Steuerung über Env-Vars**. Lokale Schicht-2-Erweiterungen sind als solche markiert.
 >
 > Stand: 2026-06-10. **Migration abgeschlossen** (Plugin-only-Umbau): alle ECC-Duplikate im Home
@@ -28,7 +28,7 @@
 
 | Was | Pfad | Zweck | Status |
 |---|---|---|---|
-| **ECC-Plugin** (Core: Agents, Skills, Commands, Hooks) | `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` | **Single Source** des ECC-Verhaltens | ✅ aktiv |
+| **ECC-Plugin** (Core: Agents, Skills, Commands, Hooks) | `~/.claude/plugins/cache/ecc/ecc/2.0.0/` | **Single Source** des ECC-Verhaltens | ✅ aktiv |
 | **Globale Settings** | `~/.claude/settings.json` | `env.ECC_HOOK_PROFILE=minimal` + `ECC_GATEGUARD=off` → zähmt Hooks in Nicht-ECC-Projekten | ✅ umgestellt (2026-06-05) |
 | **State-Sync global** | `~/.claude/state-sync/` (Symlink → Repo-Engine) + Hooks `SessionStart/Stop/PreCompact` in `~/.claude/settings.json` | EIN globaler Hook; der Guard (`state/.ecc-managed` ODER 4 STATE_FILES) macht ihn in Nicht-ECC-Projekten zum No-op → onboarded Projekte brauchen **keine** eigenen state-sync-Hooks mehr | ✅ aktiv |
 | **ECC-Rules global** | ~~`~/.claude/rules/ecc/`~~ | **ENTFERNT 2026-06-10** — 117 Dateien aller Sprachen wurden in **jede** Session injiziert (~Auto-Compact-Ursache). Rules kommen nun **gar nicht** ins Projekt (slim/plugin-only) — alle Rules liefert global das Plugin `ecc@ecc` | ✅ entfernt |
@@ -40,8 +40,8 @@
 | **Secret** (mgrep) | `~/.claude/settings.json` → `env.MXBAI_API_KEY` | user-scoped, **nie ins Repo** | ✅ |
 | **Migration-Backups** | `~/.claude-ecc-migration-backups/<stamp>/` + `/root/harness-backup-20260610/` | Rollback (settings, rules, commands, skills, hooks, claude-mem-Daten, homunculus, Projekt-.claude, eigene Arbeit aus ECC-Klon: voice-orchestrator + ECC-WORKFLOW-GUIDE.de.md) | ✅ |
 
-**Audit-Pin (ersetzt das vendored `ecc/`):** Plugin-Version **`2.0.0-rc.1`**. Audit läuft gegen das globale Plugin:
-`node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js`.
+**Audit-Pin (ersetzt das vendored `ecc/`):** Plugin-Version **`2.0.0`**. Audit läuft gegen das globale Plugin:
+`node ~/.claude/plugins/cache/ecc/ecc/2.0.0/scripts/harness-audit.js`.
 
 ---
 

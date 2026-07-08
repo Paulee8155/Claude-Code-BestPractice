@@ -75,7 +75,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 | Schicht | Pfad | Regel |
 |---|---|---|
-| **1 — ECC-Core** | **globales Plugin** `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1` (`ecc@ecc`) | **Single Source.** Nicht vendoren, nicht patchen — Verhalten nur über Env-Vars + Schicht 2 ändern. |
+| **1 — ECC-Core** | **globales Plugin** `~/.claude/plugins/cache/ecc/ecc/2.0.0` (`ecc@ecc`) | **Single Source.** Nicht vendoren, nicht patchen — Verhalten nur über Env-Vars + Schicht 2 ändern. |
 | **2 — Extras** | `bestpractice-extras/` | Eigene agents/commands/rules/templates + `state-sync/`. Additive Wrapper um den Core. |
 | Doku | `docs/` | `WO-LAEUFT-WAS.md` (Landkarte, Single Source), ECC-Erklärbuch, Harness-Guide, Mega-Workflow. |
 
@@ -83,7 +83,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 - **ECC-Workflow einhalten:** RESEARCH → PLAN (`/plan`, wartet auf OK) → IMPLEMENT (TDD) → REVIEW (`/code-review`) → VERIFY.
 - **Core unberührt:** Änderungen am ECC-Verhalten laufen über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2, nie durch Edits am Plugin.
-- **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js` → Repo-Integrität.
+- **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0/scripts/harness-audit.js` → Repo-Integrität.
 - **Modell:** Opus 4.8 (1M) Standard; `/model-route` vor mehrdeutigen/architektonischen Aufgaben.
 
 ## Hook-Scope (offizielle ECC-Mechanik: Profil statt ID-Liste)
@@ -125,7 +125,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 ## Core-Integrität & Attribution
 
-- **ECC-Core = globales Plugin `ecc@ecc` (Upstream 2.0.0-rc.1), nicht mehr vendored.**
+- **ECC-Core = globales Plugin `ecc@ecc` (Upstream 2.0.0), nicht mehr vendored.**
   Single Source unter `~/.claude/plugins/cache/ecc/`. Änderungen am ECC-Verhalten laufen
   ausschließlich über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2 — nie durch Patches im Plugin.
 - **Attribution-Policy (Schicht-2-Override):** Co-Authorship ist für dieses Setup **AKTIV**
