@@ -49,6 +49,16 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Codex-Dateien im Projekt-Root. Codex laeuft hier ausschliesslich als Companion,
+ * d.h. via /codex:* aus Claude Code heraus — es gibt keinen Codex-nativen Modus und
+ * das Onboarding legt diese Dateien NIE an. Falls sie doch existieren (Altprojekt,
+ * fremdes Repo), werden sie erkannt und unangetastet gelassen: kein Auto-Move, kein
+ * Hard-Delete. Entfernen ist eine bewusste Handentscheidung.
+ */
+const CODEX_ASSETS = ['AGENTS.md', '.codex', '.agents'];
+function codexAssets(root) { return CODEX_ASSETS.filter((r) => exists(path.join(root, r))); }
+
 function exists(p) { try { fs.accessSync(p); return true; } catch { return false; } }
 function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch { return false; } }
 
@@ -91,9 +101,14 @@ function decruftTargets(root) {
     exists(path.join(root, '.claude', 'rules', 'ecc')) ||
     exists(path.join(root, '.claude', 'AGENTS.md'));
 
-  // Plugin-Metadaten + Codex/Superpowers-Altlasten (immer, falls vorhanden).
+  // Plugin-Metadaten + Superpowers-Altlasten (immer, falls vorhanden).
+  //
+  // Nur Pfade UNTERHALB von .claude/ gelten als Altlast — das sind Dumps, die
+  // ausschliesslich der alte ECC-Installer angelegt hat. Die Root-Pendants
+  // (AGENTS.md, .codex/, .agents/) werden nie automatisch entfernt; siehe
+  // CODEX_ASSETS oben und rules/codex-delegation.md.
   ['.claude/plugin.json', '.claude/marketplace.json', '.claude/PLUGIN_SCHEMA_NOTES.md',
-   '.claude/AGENTS.md', '.claude/.agents', 'AGENTS.md', '.codex', '.superpowers'].forEach(add);
+   '.claude/AGENTS.md', '.claude/.agents', '.superpowers'].forEach(add);
 
   // settings.json-Backups des alten Installers.
   const claudeDir = path.join(root, '.claude');
@@ -273,6 +288,11 @@ function main() {
 
   log('Preflight:');
   for (const c of preflight(root)) log(`  ${c.ok ? 'OK ' : 'WARN'}  ${c.msg}`);
+
+  const found = codexAssets(root);
+  log('\nCodex (Companion — Delegation via /codex:* aus Claude Code):');
+  log('  keine projektlokalen Codex-Dateien angelegt');
+  found.forEach((f) => log(`  keep    ${f}  (vorgefunden — unangetastet, kein Auto-Move)`));
 
   const { targets, vendored } = decruftTargets(root);
   log(`\nDe-Cruft (Vendoring-Signatur: ${vendored ? 'ja' : 'nein'}):`);

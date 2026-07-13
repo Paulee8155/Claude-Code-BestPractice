@@ -37,6 +37,27 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 | Projekt ECC-ready | `/ecc-onboard` |
 | Codebase kartieren | `/update-codemaps` |
 
+## Codex Companion (Zweitmeinung — nie Ersatz)
+
+Codex läuft **ausschließlich** als globales Plugin `codex@openai-codex`, aufgerufen via
+`/codex:*` aus Claude Code. **Kein Codex-CLI-Betrieb, keine `AGENTS.md`, kein Codex-Harness
+im Projekt.** Claude + ECC bleibt führender Agent und einziger Orchestrator.
+
+| Situation | Command | Schreibt? |
+|---|---|---|
+| Erster Versuch gescheitert / hartnäckiger Bug | `/codex:rescue --background` | **ja** |
+| Größere Änderung fertig (vor Commit) | `/codex:review --base <ref> --background` | nein |
+| Geht produktiv (WMS, Werkstatt) | `/codex:adversarial-review --base <ref> --background` | nein |
+| Job prüfen / abholen | `/codex:status` · `/codex:result` | nein |
+
+- **Vor jedem schreibenden Job:** `bash bestpractice-extras/scripts/codex/preflight.sh`
+  (GO / READ-ONLY / STOP — 2 Kerne, knapper RAM+Disk).
+- **Base-Branch nie raten** (`main`/`master`/`Test`/`prod`/`staging` existieren nebeneinander).
+- **Kein Befund wird automatisch übernommen** — Claude kategorisiert und begründet.
+- **Ein grüner Fix ist kein Deployment.** Deployments bleiben manuell.
+- Review-Gate bleibt **aus** (Plugin-Default `stopReviewGate: false`).
+- Details: `docs/CODEX-COMPANION-GUIDE.md` · Regeln: `bestpractice-extras/rules/codex-{delegation,capacity}.md`
+
 ## Token-Budget
 
 - `/compact` mit Hint bei > 40% Kontext — nie autocompact abwarten

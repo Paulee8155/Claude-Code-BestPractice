@@ -53,10 +53,36 @@ if [ ! -d "$PLUGIN_DIR" ]; then
   exit 1
 fi
 
+# 0b) Codex-Companion-Preflight (rein informativ — installiert/ändert NICHTS an Codex).
+#     Codex läuft hier nur als Plugin codex@openai-codex, aufgerufen via /codex:* aus
+#     Claude Code. Keine Codex-CLI-Arbeit, kein projektlokaler Codex-Harness, keine
+#     AGENTS.md. Auth bleibt ChatGPT-Login; dieses Skript fasst ~/.codex/ nie an.
+echo "[VPS] Codex-Companion-Preflight:"
+if command -v codex >/dev/null 2>&1; then
+  echo "[VPS]   CLI:    $(codex --version 2>/dev/null || echo 'unbekannt')"
+  # Nur den Auth-TYP melden — nie Account, Token oder Datei-Inhalt.
+  # 'codex login status' schreibt auf stderr — daher 2>&1, sonst greift der grep nie.
+  if codex login status 2>&1 | grep -qi 'chatgpt'; then
+    echo "[VPS]   Auth:   ChatGPT-Login aktiv (kein API-Key) — OK"
+  elif codex login status >/dev/null 2>&1; then
+    echo "[VPS]   Auth:   angemeldet, aber NICHT per ChatGPT — prüfen (API-Key unerwünscht)"
+  else
+    echo "[VPS]   Auth:   nicht angemeldet → 'codex login --device-auth' (manuell, interaktiv)"
+  fi
+else
+  echo "[VPS]   CLI:    NICHT gefunden → 'npm install -g @openai/codex' (manuell)"
+fi
+if grep -q '"codex@openai-codex": true' "$CLAUDE_HOME/settings.json" 2>/dev/null; then
+  echo "[VPS]   Plugin: codex@openai-codex aktiv — OK"
+else
+  echo "[VPS]   Plugin: NICHT aktiv → in Claude Code: /plugin install codex@openai-codex"
+fi
+
 # 1) Rules aus dem Plugin-Cache nach ~/.claude/rules/ecc (Plugin verteilt rules nicht selbst)
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[VPS] DRY-RUN — würde kopieren: $PLUGIN_DIR/rules/ → $CLAUDE_HOME/rules/ecc/"
   echo "[VPS] DRY-RUN — würde Extras layern (siehe Schritt 2)."
+  echo "[VPS] DRY-RUN — würde Codex-Regeln layern: codex-delegation.md, codex-capacity.md"
   exit 0
 fi
 echo "[VPS] Verteile Rules aus Plugin-Cache → ~/.claude/rules/ecc ..."
@@ -70,6 +96,8 @@ cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/commands/mega-plan.md"         "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/attribution-policy.md"   "$CLAUDE_HOME/rules/ecc-extras/"
+cp "$EXTRAS_DIR/rules/codex-delegation.md"     "$CLAUDE_HOME/rules/ecc-extras/"
+cp "$EXTRAS_DIR/rules/codex-capacity.md"       "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/agents/rpi-"*.md               "$CLAUDE_HOME/agents/"
 [ "$EXTRAS_DIR/commands/start.md" -ef "$CLAUDE_HOME/commands/start.md" ] || cp "$EXTRAS_DIR/commands/start.md" "$CLAUDE_HOME/commands/"
 if [ -d "$EXTRAS_DIR/contexts" ]; then cp "$EXTRAS_DIR/contexts/"*.md "$CLAUDE_HOME/contexts/" 2>/dev/null || true; fi

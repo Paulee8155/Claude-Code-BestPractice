@@ -124,9 +124,11 @@ function main() {
   check('4 globaler state-sync-Hook + Engine ausführbar', hookOk && exists(GLOBAL_ENGINE) && engineRuns);
 
   // 6) keine Altlasten (außerhalb .harness-backup/)
+  // Root-AGENTS.md/.codex/.agents sind Codex-Projektwahrheit, keine Altlast — nur
+  // die .claude/-Dumps des alten Installers zaehlen. Siehe onboard.js decruftTargets().
   const cruft = ['.claude/rules/ecc', '.claude/skills/ecc', '.claude/ecc', '.claude/plugin.json',
     '.claude/marketplace.json', '.claude/AGENTS.md', '.claude/PLUGIN_SCHEMA_NOTES.md', '.claude/.agents',
-    'AGENTS.md', '.codex', '.superpowers'].filter((c) => exists(path.join(root, c)));
+    '.superpowers'].filter((c) => exists(path.join(root, c)));
   check('6 keine vendored ECC-Altlasten', cruft.length === 0, cruft.length ? `gefunden: ${cruft.join(', ')}` : '');
   const ECC_MCP = ['memory', 'context7', 'exa', 'playwright', 'github', 'sequential-thinking'];
   const mcp = readJSON(path.join(root, '.mcp.json'));
