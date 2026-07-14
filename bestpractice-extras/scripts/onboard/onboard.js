@@ -9,11 +9,17 @@
  *
  *   node onboard.js --project <root>            # DRY-RUN (Default): zeigt den Plan, schreibt nichts
  *   node onboard.js --project <root> --apply    # führt den Plan aus + Postflight-Verify
+ *   node onboard.js --project <root> --with-cbm # zusätzlich Codebase Memory aktivieren (opt-in)
  *
  * Ablauf (apply):
  *   Preflight  → De-Cruft (move → .harness-backup/<stamp>/) → Slim-Scaffold
  *   (settings.json env-merge + state-sync-Hook-Strip, state/, Sentinel, .gitignore)
- *   → consumer-scaffold → harvest → initialer PRE-Sync → onboard-verify.
+ *   → consumer-scaffold → harvest → [CBM-Aktivierung] → initialer PRE-Sync → onboard-verify.
+ *
+ * --with-cbm ruft dieselbe Projektlogik wie /cbm enable (scripts/cbm/project.js) —
+ * keine zweite Implementierung. Ohne das Flag ändert sich am Verhalten nichts.
+ * Die CBM-Aktivierung läuft bewusst NACH dem De-Cruft: Der De-Cruft kann die
+ * .mcp.json ins Backup verschieben, wenn sie ECC-Server dupliziert.
  *
  * Sicher: De-Cruft VERSCHIEBT (nie Hard-Delete); Scaffold ist additiv (überschreibt
  * keine User-Inhalte). Exit-Code = Verify-Code (apply) bzw. 0 (dry-run).
@@ -30,6 +36,8 @@ const CONSUMER_SCAFFOLD = path.join(ONBOARD_DIR, 'consumer-scaffold.js');
 const HARVEST = path.join(EXTRAS, 'scripts', 'context-harvest', 'harvest.js');
 const STATE_SYNC = path.join(EXTRAS, 'scripts', 'state-sync', 'state-sync.js');
 const VERIFY = path.join(ONBOARD_DIR, 'onboard-verify.js');
+const CBM_PROJECT = path.join(EXTRAS, 'scripts', 'cbm', 'project.js');
+const CBM_WRAPPER = path.join(process.env.HOME || '/root', '.local', 'bin', 'codebase-memory-mcp-harness');
 const GLOBAL_ENGINE = path.join(process.env.HOME || '/root', '.claude', 'state-sync', 'state-sync.js');
 const GLOBAL_SETTINGS = path.join(process.env.HOME || '/root', '.claude', 'settings.json');
 
@@ -39,12 +47,13 @@ function log(m) { process.stdout.write(`${m}\n`); }
 function warn(m) { process.stderr.write(`[onboard] ${m}\n`); }
 
 function parseArgs(argv) {
-  const args = { project: process.cwd(), apply: false };
+  const args = { project: process.cwd(), apply: false, withCbm: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--project') args.project = argv[++i] || args.project;
     else if (a === '--apply') args.apply = true;
     else if (a === '--dry-run') args.apply = false;
+    else if (a === '--with-cbm') args.withCbm = true;
   }
   return args;
 }
@@ -311,6 +320,15 @@ function main() {
     log('  create  .claude/memory.md, SECURITY.md, .gitignore-Secrets  (consumer-scaffold)');
     log('  fill    state/context.md, state/tasks.md  (harvest, falls git/README)');
     log('  pre     WORKING-CONTEXT.md  (initialer state-sync PRE)');
+    if (args.withCbm) {
+      log('\nCodebase Memory (--with-cbm):');
+      if (!exists(CBM_WRAPPER)) {
+        log(`  FEHLT   globale CBM-Binary (${CBM_WRAPPER})`);
+        log('          → erst installieren: ./install-vps.sh --with-cbm');
+      } else {
+        run(CBM_PROJECT, ['enable', '--project', root]);   // Dry-Run (kein --yes)
+      }
+    }
     log('\nDRY-RUN — nichts geschrieben. Mit --apply ausführen.\n');
     process.exit(0);
   }
@@ -334,6 +352,25 @@ function main() {
   run(CONSUMER_SCAFFOLD, ['--project', root]);
   log('\nContext-Harvest:');
   run(HARVEST, ['--project', root]);
+  // CBM NACH dem De-Cruft (der kann die .mcp.json ins Backup verschoben haben) und
+  // vor dem Verify — dieselbe Logik wie /cbm enable, nur ohne Rückfrage: die hat der
+  // Nutzer mit --with-cbm schon gegeben.
+  if (args.withCbm) {
+    log('\nCodebase Memory (--with-cbm):');
+    if (!exists(CBM_WRAPPER)) {
+      warn('Die globale CBM-Binary fehlt — Aktivierung übersprungen.');
+      warn(`  erwartet: ${CBM_WRAPPER}`);
+      warn('  installieren: ./install-vps.sh --with-cbm');
+      log('\n=== Onboarding ABGEBROCHEN (CBM angefordert, aber nicht installiert) ===\n');
+      process.exit(2);
+    }
+    const cbmCode = run(CBM_PROJECT, ['enable', '--project', root, '--yes']);
+    if (cbmCode !== 0) {
+      log('\n=== Onboarding ABGEBROCHEN (CBM-Aktivierung fehlgeschlagen) ===\n');
+      process.exit(cbmCode);
+    }
+  }
+
   log('\nInitialer PRE-Sync:');
   run(STATE_SYNC, ['pre', '--project', root]);
 
