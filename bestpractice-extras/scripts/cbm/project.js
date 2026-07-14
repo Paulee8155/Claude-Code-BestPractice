@@ -301,8 +301,9 @@ function actionDoctor(root) {
 
   const code = report(results);
   log('MCP-/Tool-Budget (Harness-Grenze: max. 10 MCP-Server, max. 80 Tools):');
-  log(`  CBM steuert 1 MCP-Server und 14 Tools bei — aber nur in Projekten mit .mcp.json-Eintrag.`);
-  log(`  Hier: CBM ist ${enabled ? 'AKTIV → +1 Server / +14 Tools' : 'nicht aktiv → +0'}.`);
+  log("  CBM steuert 1 MCP-Server und 8 Tools bei (real gemessen via tools/list) — aber nur");
+  log("  in Projekten mit .mcp.json-Eintrag.");
+  log(`  Hier: CBM ist ${enabled ? 'AKTIV → +1 Server / +8 Tools' : 'nicht aktiv → +0'}.`);
   log('  Reale Gesamtzahl NUR in einer frischen Session mit /mcp und /context ablesbar.\n');
   return code;
 }

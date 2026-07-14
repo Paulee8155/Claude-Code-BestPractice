@@ -88,6 +88,18 @@ Liegen in `bestpractice-extras/` — **additive Wrapper**, kein Patch am Core:
 | `scripts/mgrep/` | semantische Suche (Mixedbread) |
 | `scripts/build-docs/` | Office-Snapshots aus Markdown |
 | `commands/start.md`, `mega-plan.md` | Tagesstart, RPI-Berater |
+| `scripts/cbm/` + `commands/cbm.md` + `skills/cbm-code-intelligence/` | **Codebase Memory** — Code-Intelligence-Graph. Binary **global** (`~/.local/lib/codebase-memory-mcp/<version>/`, Wrapper `~/.local/bin/codebase-memory-mcp-harness`), MCP-Server **projektlokal** via `<projekt>/.mcp.json`. Kein Hook, keine UI, kein Auto-Index. |
+
+### Codebase Memory — wo genau was liegt
+
+| Ort | Inhalt |
+|---|---|
+| `~/.local/lib/codebase-memory-mcp/<version>/` | versionierte Binary; `current` → aktiv, `previous` → Rollback-Ziel |
+| `~/.local/bin/codebase-memory-mcp-harness` | Wrapper — setzt `CBM_ALLOWED_ROOT=/root/projekte`, `CBM_CACHE_DIR` (0700), `CBM_LOG_LEVEL=warn`, `CBM_MEM_BUDGET_MB=512`, `umask 077`. **Die einzige Binary, die je in eine `.mcp.json` wandert.** |
+| `~/.cache/codebase-memory-mcp/` | Graph-DBs (SQLite) + CBM-Config (`auto_index=false`, `auto_watch=false`) |
+| `<projekt>/.mcp.json` → `mcpServers.codebase-memory` | **nur in aktivierten Projekten.** `/cbm enable` trägt additiv ein, `/cbm disable` entfernt nur diesen einen Eintrag. |
+| `<projekt>/.cbmignore` | Managed Block (Secrets, Laufzeitdaten, Buildartefakte, `state/`) — eigene Regeln ausserhalb der Marker bleiben unangetastet |
+| `~/.claude/settings.json` | **unverändert.** CBM steht dort nicht drin, hat keinen Hook und verdrängt RTK nicht. |
 
 > **Warum Schicht 2 statt Core-Patch:** Der Core bleibt Upstream-rein. ECC-Verhalten wird nur über
 > Env-Vars + additive Wrapper verändert, nie durch Edits im Plugin.

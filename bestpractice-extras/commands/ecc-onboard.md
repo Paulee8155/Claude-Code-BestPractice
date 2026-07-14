@@ -37,7 +37,7 @@ automatisch für andere Projekte indexiert.
 Voraussetzung ist die globale Binary (`./install-vps.sh --with-cbm`). Fehlt sie,
 bricht der Lauf mit der Installationsanweisung ab, statt still weiterzumachen.
 Der Nutzer muss `--with-cbm` in der Bestätigung (Schritt 2) ausdrücklich mit abnicken —
-es kostet **1 MCP-Server und 14 Tools** in diesem Projekt.
+es kostet **1 MCP-Server und 8 Tools** in diesem Projekt.
 
 ## Voraussetzung (einmalig, global)
 

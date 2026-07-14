@@ -43,6 +43,6 @@ Dry-Run zeigen → Bestätigung einholen → mit `--yes` ausführen.
 - Fehlt die globale Binary, meldet das Skript das mitsamt Installationsbefehl
   (`./install-vps.sh --with-cbm`). Nicht selbst herumbasteln.
 - Ein rotes `doctor` nicht übergehen — die FAILs benennen den nächsten Schritt.
-- Budget: CBM steuert **1 MCP-Server und 14 Tools** bei (Harness-Grenze: 10 Server /
+- Budget: CBM steuert **1 MCP-Server und 8 Tools** bei (Harness-Grenze: 10 Server /
   80 Tools) — aber nur in aktivierten Projekten. Die realen Zahlen stehen in einer
   frischen Session unter `/mcp` und `/context`.

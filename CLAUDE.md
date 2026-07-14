@@ -58,6 +58,32 @@ im Projekt.** Claude + ECC bleibt führender Agent und einziger Orchestrator.
 - Review-Gate bleibt **aus** (Plugin-Default `stopReviewGate: false`).
 - Details: `docs/CODEX-COMPANION-GUIDE.md` · Regeln: `bestpractice-extras/rules/codex-{delegation,capacity}.md`
 
+## Codebase Memory (Code-Intelligence — optional je Projekt)
+
+Graph über den **tatsächlichen Quellcode** (Symbole, Aufrufketten, Routen, Blast Radius).
+Binary global (gepinnt v0.9.0, headless), MCP-Server **nur in aktivierten Projekten**
+(kostet dort 1 Server + 8 Tools). Skill: `cbm-code-intelligence`.
+
+| Situation | Command |
+|---|---|
+| RESEARCH vor breiter Dateisuche | `get_architecture` → `search_graph` → `trace_path`, **dann** Dateien lesen |
+| Projekt aktivieren | `/cbm enable` (Dry-Run → OK → **Session neu starten**) |
+| Nach größeren Änderungen | `/cbm reindex` (kein Auto-Watch — der Index veraltet sonst) |
+| Diagnose / Budget | `/cbm doctor` |
+| Abschalten | `/cbm disable` (entfernt nur den eigenen Eintrag; Index bleibt) |
+
+- **CBM ≠ Memory ≠ state/.** Memory = frühere Entscheidungen · `state/` = Projektstand ·
+  CBM = Struktur des Codes *jetzt* · Codemaps = versionierte Snapshots.
+- **Der Graph ersetzt kein Dateilesen** und ist kein Korrektheitsbeweis. Leerer Call-Graph
+  ist normal (dynamische Aufrufe, DI, Callbacks) → Fallback: LSP → Grep → mgrep → Datei lesen.
+- **Falle:** `search_graph.file_pattern` ist ein **Literal-Substring**, `name_pattern` eine
+  **Regex**. Eine Regex im `file_pattern` liefert still `total=0` — nicht als „gibt's nicht" lesen.
+- **Nur 8 der 14 Tools** sind über MCP erreichbar; `detect_changes`, `list_projects`,
+  `delete_project` u.a. nur über die CLI.
+- `delete_project` / `ingest_traces` nur nach ausdrücklicher Zustimmung. `manage_adr` **nicht**
+  als Entscheidungsablage — Entscheidungen gehören in `state/decisions.md` (der Cache ist nicht versioniert).
+- Details: `bestpractice-extras/scripts/cbm/README.md`
+
 ## Token-Budget
 
 - `/compact` mit Hint bei > 40% Kontext — nie autocompact abwarten
