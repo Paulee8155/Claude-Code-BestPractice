@@ -20,11 +20,34 @@ Codemaps, Memory & Persistenz, Security. Neu generierbar mit `python3 docs/build
 ./install-vps.sh --dry-run       # nur Plan anzeigen, nichts schreiben
 ./install-vps.sh --profile full  # größeres ECC-Profil
 ./install-vps.sh --harden        # zusätzlich deny-Sicherheitsbasis (opt-in, mit Backup)
+./install-vps.sh --with-cbm      # zusätzlich Codebase Memory global installieren (opt-in)
 ```
 
 Das Skript ist idempotent. Es installiert ECC namespace-sicher (`rules/ecc/`, `skills/ecc/`,
 `agents/`, `commands/`), layert /ecc-onboard + die Karpathy-Rule und lässt **RTK-Hook und
 `settings.json` unangetastet**. ECC-Hooks bleiben **inaktiv** (Security-First).
+
+## 🧠 Codebase Memory (optional)
+
+Code-Intelligence-Graph (Symbole, Aufrufketten, Routen, Blast Radius) — gepinnt auf
+**v0.9.0**, headless (keine UI).
+
+**Binary global, MCP-Server projektlokal.** Die Binary wird einmal VPS-weit installiert;
+aktiviert wird der Server nur in Projekten, die ihn ausdrücklich anfordern — jeder aktive
+MCP-Server kostet sonst in *jeder* Session Budget (hier: 1 Server + 8 Tools).
+
+```bash
+./install-vps.sh --with-cbm     # einmalig: Binary + /cbm + Skill
+/cbm enable                     # pro Projekt (Dry-Run → OK → Session neu starten)
+/cbm status · doctor · reindex · disable
+```
+
+Bewusst **nicht** benutzt: der Upstream-Auto-Installer (er schreibt ungefragt Agent-Configs
+**und einen PreToolUse-Hook auf Grep/Glob**), `curl | bash`, `latest`-Downloads, die
+UI-Variante (Port 9749), Auto-Indexing und Hintergrund-Watcher.
+
+Details, Sicherheitsgrenzen, Update- und Rollback-Verfahren:
+[`bestpractice-extras/scripts/cbm/README.md`](bestpractice-extras/scripts/cbm/README.md)
 
 ## 🗂 Repo-Struktur
 

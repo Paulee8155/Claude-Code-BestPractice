@@ -1,7 +1,7 @@
 # Attribution-Policy (Schicht 2)
 
 Hält die Attribution-Wahrheit für dieses Setup in **Schicht 2** fest, damit der vendored
-ECC-Core (`ecc/`) und seine global installierte Kopie byte-identisch zu **Upstream 2.0.0-rc.1**
+ECC-Core (`ecc/`) und seine global installierte Kopie byte-identisch zu **Upstream 2.0.0**
 bleiben — „Core unberührt" einhalten, ohne die korrekte Attribution-Wahrheit zu verlieren.
 
 ## Policy

@@ -59,7 +59,7 @@ ls -R .claude/rules/ecc | head; ls state/; cat .claude/settings.json | grep -i s
 ```
 🖥️  /harness-audit
 ```
-(oder `$ node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js`)
+(oder `$ node ~/.claude/plugins/cache/ecc/ecc/2.0.0/scripts/harness-audit.js`)
 
 | ✓ | Pass-Kriterium |
 |---|---|

@@ -20,7 +20,24 @@ Per-Projekt-Hooks (state-sync läuft **global**).
 ```text
 /ecc-onboard                 # aktuelles Projekt, Dry-Run → 1× OK → Apply
 /ecc-onboard --project <dir> # anderes/fremdes Projekt
+/ecc-onboard --with-cbm      # zusätzlich Codebase Memory aktivieren (opt-in, s.u.)
 ```
+
+## Codebase Memory (`--with-cbm`, optional)
+
+**Nur auf ausdrücklichen Wunsch.** Ohne das Flag ändert sich am Onboarding nichts —
+CBM wird dann weder aktiviert noch geprüft, und `onboard-verify` meldet lediglich
+„optional nicht aktiviert".
+
+Mit dem Flag ruft `onboard.js` dieselbe Projektlogik wie `/cbm enable`
+(`scripts/cbm/project.js`): `.mcp.json` additiv ergänzen, `.cbmignore`-Managed-Block
+pflegen, Projekt **einmalig** indexieren, Architektur-Smoke-Test. Es wird nichts
+automatisch für andere Projekte indexiert.
+
+Voraussetzung ist die globale Binary (`./install-vps.sh --with-cbm`). Fehlt sie,
+bricht der Lauf mit der Installationsanweisung ab, statt still weiterzumachen.
+Der Nutzer muss `--with-cbm` in der Bestätigung (Schritt 2) ausdrücklich mit abnicken —
+es kostet **1 MCP-Server und 8 Tools** in diesem Projekt.
 
 ## Voraussetzung (einmalig, global)
 
@@ -54,11 +71,12 @@ via `/ecc:instinct-status` sichtbar, Cluster via `/ecc:evolve`.
 ### Schritt 1 — Dry-Run (read-only)
 
 ```bash
-node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>"
+node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>" [--with-cbm]
 ```
 
 Zeigt Preflight (node, globale Engine/Hooks), erkannte **Altlasten** (Vendoring-Signatur →
-Backup-Plan) und den **Slim-Scaffold-Plan**. Schreibt nichts.
+Backup-Plan) und den **Slim-Scaffold-Plan**. Schreibt nichts. Mit `--with-cbm` wird
+zusätzlich der CBM-Aktivierungsplan gezeigt (ebenfalls read-only).
 
 ### Schritt 2 — Einmal bestätigen (AskUserQuestion)
 
@@ -68,13 +86,14 @@ was angelegt/gemergt wird. Genau **eine** Bestätigung.
 ### Schritt 3 — Apply (nach OK)
 
 ```bash
-node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>" --apply
+node "/root/projekte/Claude Code BestPractice/bestpractice-extras/scripts/onboard/onboard.js" --project "<ZIELPROJEKT-ROOT>" --apply [--with-cbm]
 ```
 
 Führt aus: De-Cruft (move → Backup) → Slim-Scaffold (settings env-merge + state-sync-Hook-Strip,
 `state/`, Sentinel, `.gitignore`) → `consumer-scaffold.js` → `harvest.js` (Auto-Kontext aus
-README/git/TODO) → initialer PRE-Sync (`WORKING-CONTEXT.md`) → **`onboard-verify.js`** (Abnahme).
-Idempotent: Re-Run mergt, überschreibt keine User-Inhalte.
+README/git/TODO) → [CBM-Aktivierung bei `--with-cbm`] → initialer PRE-Sync (`WORKING-CONTEXT.md`)
+→ **`onboard-verify.js`** (Abnahme). Idempotent: Re-Run mergt, überschreibt keine User-Inhalte.
+CBM läuft bewusst **nach** dem De-Cruft — der kann die `.mcp.json` ins Backup verschieben.
 
 ### Schritt 4 — `PROJECT_RULES.md` + `CLAUDE.md` verfeinern (LLM)
 

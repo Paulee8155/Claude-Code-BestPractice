@@ -1,0 +1,17 @@
+{
+  "_comment": "Single Source of Truth für die gepinnte codebase-memory-mcp-Release. Nie 'latest' laden. SHA-256 stammt aus checksums.txt des Releases und ist fail-closed Pflicht.",
+  "repo": "DeusData/codebase-memory-mcp",
+  "version": "v0.9.0",
+  "variant": "standard",
+  "platform": "linux",
+  "assets": {
+    "amd64": {
+      "filename": "codebase-memory-mcp-linux-amd64.tar.gz",
+      "sha256": "e2832a8d207c26beaa30efa6222ed4a37cb3f526ca4bee060bfbf336ed6fc679"
+    },
+    "arm64": {
+      "filename": "codebase-memory-mcp-linux-arm64.tar.gz",
+      "sha256": "68a345d9a6842f02a3cb07e187b28bc38c4f3a22967f47fadbcd0757ba93a680"
+    }
+  }
+}

@@ -37,6 +37,53 @@ Upgrade auf Opus wenn: erster Versuch scheiterte · 5+ Dateien · Architekturent
 | Projekt ECC-ready | `/ecc-onboard` |
 | Codebase kartieren | `/update-codemaps` |
 
+## Codex Companion (Zweitmeinung — nie Ersatz)
+
+Codex läuft **ausschließlich** als globales Plugin `codex@openai-codex`, aufgerufen via
+`/codex:*` aus Claude Code. **Kein Codex-CLI-Betrieb, keine `AGENTS.md`, kein Codex-Harness
+im Projekt.** Claude + ECC bleibt führender Agent und einziger Orchestrator.
+
+| Situation | Command | Schreibt? |
+|---|---|---|
+| Erster Versuch gescheitert / hartnäckiger Bug | `/codex:rescue --background` | **ja** |
+| Größere Änderung fertig (vor Commit) | `/codex:review --base <ref> --background` | nein |
+| Geht produktiv (WMS, Werkstatt) | `/codex:adversarial-review --base <ref> --background` | nein |
+| Job prüfen / abholen | `/codex:status` · `/codex:result` | nein |
+
+- **Vor jedem schreibenden Job:** `bash bestpractice-extras/scripts/codex/preflight.sh`
+  (GO / READ-ONLY / STOP — 2 Kerne, knapper RAM+Disk).
+- **Base-Branch nie raten** (`main`/`master`/`Test`/`prod`/`staging` existieren nebeneinander).
+- **Kein Befund wird automatisch übernommen** — Claude kategorisiert und begründet.
+- **Ein grüner Fix ist kein Deployment.** Deployments bleiben manuell.
+- Review-Gate bleibt **aus** (Plugin-Default `stopReviewGate: false`).
+- Details: `docs/CODEX-COMPANION-GUIDE.md` · Regeln: `bestpractice-extras/rules/codex-{delegation,capacity}.md`
+
+## Codebase Memory (Code-Intelligence — optional je Projekt)
+
+Graph über den **tatsächlichen Quellcode** (Symbole, Aufrufketten, Routen, Blast Radius).
+Binary global (gepinnt v0.9.0, headless), MCP-Server **nur in aktivierten Projekten**
+(kostet dort 1 Server + 8 Tools). Skill: `cbm-code-intelligence`.
+
+| Situation | Command |
+|---|---|
+| RESEARCH vor breiter Dateisuche | `get_architecture` → `search_graph` → `trace_path`, **dann** Dateien lesen |
+| Projekt aktivieren | `/cbm enable` (Dry-Run → OK → **Session neu starten**) |
+| Nach größeren Änderungen | `/cbm reindex` (kein Auto-Watch — der Index veraltet sonst) |
+| Diagnose / Budget | `/cbm doctor` |
+| Abschalten | `/cbm disable` (entfernt nur den eigenen Eintrag; Index bleibt) |
+
+- **CBM ≠ Memory ≠ state/.** Memory = frühere Entscheidungen · `state/` = Projektstand ·
+  CBM = Struktur des Codes *jetzt* · Codemaps = versionierte Snapshots.
+- **Der Graph ersetzt kein Dateilesen** und ist kein Korrektheitsbeweis. Leerer Call-Graph
+  ist normal (dynamische Aufrufe, DI, Callbacks) → Fallback: LSP → Grep → mgrep → Datei lesen.
+- **Falle:** `search_graph.file_pattern` ist ein **Literal-Substring**, `name_pattern` eine
+  **Regex**. Eine Regex im `file_pattern` liefert still `total=0` — nicht als „gibt's nicht" lesen.
+- **Nur 8 der 14 Tools** sind über MCP erreichbar; `detect_changes`, `list_projects`,
+  `delete_project` u.a. nur über die CLI.
+- `delete_project` / `ingest_traces` nur nach ausdrücklicher Zustimmung. `manage_adr` **nicht**
+  als Entscheidungsablage — Entscheidungen gehören in `state/decisions.md` (der Cache ist nicht versioniert).
+- Details: `bestpractice-extras/scripts/cbm/README.md`
+
 ## Token-Budget
 
 - `/compact` mit Hint bei > 40% Kontext — nie autocompact abwarten
@@ -75,7 +122,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 | Schicht | Pfad | Regel |
 |---|---|---|
-| **1 — ECC-Core** | **globales Plugin** `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1` (`ecc@ecc`) | **Single Source.** Nicht vendoren, nicht patchen — Verhalten nur über Env-Vars + Schicht 2 ändern. |
+| **1 — ECC-Core** | **globales Plugin** `~/.claude/plugins/cache/ecc/ecc/2.0.0` (`ecc@ecc`) | **Single Source.** Nicht vendoren, nicht patchen — Verhalten nur über Env-Vars + Schicht 2 ändern. |
 | **2 — Extras** | `bestpractice-extras/` | Eigene agents/commands/rules/templates + `state-sync/`. Additive Wrapper um den Core. |
 | Doku | `docs/` | `WO-LAEUFT-WAS.md` (Landkarte, Single Source), ECC-Erklärbuch, Harness-Guide, Mega-Workflow. |
 
@@ -83,7 +130,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 - **ECC-Workflow einhalten:** RESEARCH → PLAN (`/plan`, wartet auf OK) → IMPLEMENT (TDD) → REVIEW (`/code-review`) → VERIFY.
 - **Core unberührt:** Änderungen am ECC-Verhalten laufen über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2, nie durch Edits am Plugin.
-- **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/scripts/harness-audit.js` → Repo-Integrität.
+- **Audit:** `node ~/.claude/plugins/cache/ecc/ecc/2.0.0/scripts/harness-audit.js` → Repo-Integrität.
 - **Modell:** Opus 4.8 (1M) Standard; `/model-route` vor mehrdeutigen/architektonischen Aufgaben.
 
 ## Hook-Scope (offizielle ECC-Mechanik: Profil statt ID-Liste)
@@ -125,7 +172,7 @@ Zwei-Schichten-Harness: **ECC-Core (Schicht 1)** + **BestPractice-Extras (Schich
 
 ## Core-Integrität & Attribution
 
-- **ECC-Core = globales Plugin `ecc@ecc` (Upstream 2.0.0-rc.1), nicht mehr vendored.**
+- **ECC-Core = globales Plugin `ecc@ecc` (Upstream 2.0.0), nicht mehr vendored.**
   Single Source unter `~/.claude/plugins/cache/ecc/`. Änderungen am ECC-Verhalten laufen
   ausschließlich über Env-Vars (`ECC_HOOK_PROFILE`) + Schicht 2 — nie durch Patches im Plugin.
 - **Attribution-Policy (Schicht-2-Override):** Co-Authorship ist für dieses Setup **AKTIV**

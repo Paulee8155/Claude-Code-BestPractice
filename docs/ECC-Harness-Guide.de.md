@@ -1,7 +1,7 @@
 # Engineering Harness — ECC × BestPractice
 
 > **Das fusionierte, VPS-weite Claude-Code-Harness — Bedienungsanleitung.**
-> ECC 2.0.0-rc.1 als **globales Plugin** `ecc@ecc` (führend) · Schicht-2-Extras im Repo · RTK-sicher.
+> ECC 2.0.0 als **globales Plugin** `ecc@ecc` (führend) · Schicht-2-Extras im Repo · RTK-sicher.
 > Seit der Plugin-only-Migration (2026-06-10): keine vendored `ecc/`-Kopie mehr, claude-mem/superpowers deaktiviert.
 >
 > **Halte mich offen.** Dieses Dokument ist dein Nachschlagewerk neben dem Code: wann welcher Command, welches Modell, welcher MCP. Basiert auf den Guides von @affaanmustafa (X-Links am Ende).
@@ -14,7 +14,7 @@
 
 Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
-- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, Continuous Learning, Security-Scanning, 6 mitgebrachte MCP-Server. Läuft als **globales Plugin** `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0-rc.1` (Cache: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`) — damit in JEDEM Projekt verfügbar, ohne Kopien im Home oder Repo.
+- **ECC (Everything Claude Code)** von Affaan Mustafa — die dominante Engine: 63 Agents, 249 Skills, ~80 Commands, Continuous Learning, Security-Scanning, 6 mitgebrachte MCP-Server. Läuft als **globales Plugin** `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0` (Cache: `~/.claude/plugins/cache/ecc/ecc/2.0.0/`) — damit in JEDEM Projekt verfügbar, ohne Kopien im Home oder Repo.
 - **BestPractice-Extras** — die wenigen einzigartigen Stärken deines alten Harness, die ECC ergänzen: `/ecc-onboard` (One-Shot-Projekt-Setup), das `state/`-Pattern, der State-Sync, die RPI-Berater und die Karpathy-Prinzipien.
 
 **Philosophie in einem Satz:** „Konfiguration ist Fine-Tuning, nicht Architektur." Baue wiederverwendbare Muster, halte das Kontextfenster sauber, delegiere an das billigste ausreichende Modell, verifiziere mit Evidenz — und lass Komfort nie die Sicherheit überholen.
@@ -25,7 +25,7 @@ Dieses Harness ist die Fusion zweier Systeme — mit klarem Fokus auf ECC:
 
 ECC läuft als globales **Plugin** und ist damit in JEDEM Projekt auf der VPS verfügbar (WMS, Jarvis, n8n, Werkstatt …). Das Setup ist bewusst schlank und reproduzierbar:
 
-- **Plugin-only:** Single Source ist `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` — keine Kopien mehr unter `~/.claude/{rules,hooks,skills,commands}` und keine vendored `ecc/` im Repo. Update = `extraKnownMarketplaces.ecc.source.ref` in `~/.claude/settings.json` auf neuen Tag setzen.
+- **Plugin-only:** Single Source ist `~/.claude/plugins/cache/ecc/ecc/2.0.0/` — keine Kopien mehr unter `~/.claude/{rules,hooks,skills,commands}` und keine vendored `ecc/` im Repo. Update = `extraKnownMarketplaces.ecc.source.ref` in `~/.claude/settings.json` auf neuen Tag setzen.
 - **RTK bleibt König:** Der globale `PreToolUse:Bash`-Hook (RTK, 60–90 % Token-Ersparnis) wurde NICHT angefasst.
 - **Hook-Zähmung per Profil:** global `ECC_HOOK_PROFILE=minimal` (Nicht-ECC-Projekte ruhig), projekt-lokal `standard` in onboardeten Projekten (volle Pipeline). Details §14.
 - **Backup:** kompletter Vor-Migrations-Stand unter `/root/harness-backup-20260610/`.
@@ -53,7 +53,7 @@ ECC läuft als globales **Plugin** und ist damit in JEDEM Projekt auf der VPS ve
 | MCP | Externe Dienste als Tools (memory, context7, github, exa, playwright, sequential-thinking) | Plugin `.mcp.json` | pro Session |
 | Instincts | Gelernte Muster aus deinen Sessions | ~/.claude (continuous-learning), /instinct-status | wächst mit dir |
 
-*(Plugin-Pfad jeweils: `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`.)*
+*(Plugin-Pfad jeweils: `~/.claude/plugins/cache/ecc/ecc/2.0.0/`.)*
 
 **Wichtigste Regel:** Die durable Logik gehört in Skills. Commands sind nur der bequeme Einstieg. Was du zum dritten Mal tippst → mach eine Skill draus (`/skill-create`).
 
@@ -255,6 +255,7 @@ Faustregel: < 10 MCPs aktiv / < 80 Tools. Ungenutztes pro Projekt mit `/mcp` dea
 | Dienste anbinden | claude.ai-Connectoren | n8n · Notion · Gamma · Google Drive · Microsoft Learn … |
 | Bash-Token sparen | RTK (Hook, kein MCP) | 60–90 % Ersparnis, läuft transparent global |
 | Semantische Code-/Doku-Suche | mgrep (CLI/Skill, kein MCP) | ~50 % weniger Token als grep — Details in §15 |
+| Struktur des Codes (Symbole, Aufrufketten, Blast Radius) | codebase-memory | **opt-in pro Projekt** via `/cbm enable`. Binary global, Server projektlokal — kostet dort 1 Server + 8 Tools. Details in §15 |
 
 **Memory-Klarstellung (seit 2026-06-10 umgedreht):** Der memory-MCP (Wissensgraph) IST installiert (via ECC) und ist deine primäre Memory-Quelle; claude-mem ist deaktiviert. EINE Quelle pro Projekt, sonst doppelte Wahrheit. ⚠️ Die Graph-Datei liegt im npx-Cache (`~/.npm/_npx/<hash>/…/memory.jsonl`, kein MEMORY_FILE_PATH gesetzt) — kompakte Schlüssel-Fakten dort, langlebige Wahrheit zusätzlich in `state/`/Doku (Git).
 
@@ -350,9 +351,36 @@ Dazu laufen wenige DIRECT-Hooks (Stop: format-typecheck · check-console-log · 
 
 **Profil-Steuerung (env in settings.json):** `ECC_HOOK_PROFILE` (minimal/standard/strict) · `ECC_GATEGUARD=off` (GateGuard aus) · `ECC_GOVERNANCE_CAPTURE=1` (Governance-Hooks scharf) · `ECC_DISABLED_HOOKS` (gezielte ID-Liste, bei dir nicht mehr genutzt). **Wirkung erst in frischer Session.**
 
-## 15 · Power-Tools — mgrep, LSP, Sequential Thinking
+## 15 · Power-Tools — Codebase Memory, mgrep, LSP, Sequential Thinking
 
 Schicht-2-Werkzeuge, die den Alltag beschleunigen. Kein ECC-Core.
+
+### Codebase Memory — der Code-Intelligence-Graph (opt-in je Projekt)
+
+Indexiert den **tatsächlichen Quellcode** in einen Graphen (Dateien, Klassen, Funktionen, Routen, Aufrufkanten) und beantwortet in Millisekunden, wofür man sonst blind Dateien durchsucht: „wer ruft das auf?", „was hängt an dieser Änderung?", „welche Routen gibt es?". Gepinnt auf **v0.9.0**, headless.
+
+**Binary global, MCP projektlokal — und das ist die zentrale Entscheidung.** Die Binary wird einmal VPS-weit installiert (`./install-vps.sh --with-cbm`). Der MCP-Server wird aber **nie global registriert**: jeder aktive Server kostet in *jeder* Session Budget (hier 1 Server + 8 Tools), auch dort, wo es nichts zu indexieren gibt. Aktiviert wird darum bewusst pro Projekt mit `/cbm enable` (oder `/ecc-onboard --with-cbm`) — danach **Session neu starten**.
+
+**Warum nicht der Upstream-Installer.** `codebase-memory-mcp install` erkennt alle installierten Agents und schreibt ungefragt MCP-Einträge, Skills **und einen PreToolUse-Hook auf Grep/Glob**. Genau diese Fernwirkung schließt das Harness aus. Stattdessen: `release.json` pinnt Version + SHA-256, der Installer prüft die Checksumme fail-closed, testet die Binary und schaltet erst dann atomar um. Kein `curl | bash`, kein `latest`, keine UI (Port 9749), kein Auto-Index, kein Hintergrund-Watcher, kein Auto-Update.
+
+**Sicherheitsgrenzen** setzt der Wrapper `codebase-memory-mcp-harness` — die einzige Binary, die je in eine `.mcp.json` wandert: `CBM_ALLOWED_ROOT=/root/projekte` (alles ausserhalb wird abgelehnt), Cache mit 0700, `umask 077`, `CBM_MEM_BUDGET_MB=512` (ohne Deckel bemisst CBM den Graphen am *Gesamt*-RAM — davon sind ~5 von 7,9 GB durch die Container belegt).
+
+| Command | Wirkung |
+| --- | --- |
+| `/cbm status` | Version, Wrapper, MCP-Eintrag, `.cbmignore`, Index, Grenzen, Warnungen |
+| `/cbm enable` | `.mcp.json` additiv + `.cbmignore` + indexieren + Smoke-Test (Dry-Run → OK) |
+| `/cbm reindex` | Index neu aufbauen — **nötig nach größeren Änderungen** (kein Auto-Watch) |
+| `/cbm doctor` | volle Diagnose inkl. Secret-Ausschluss und Budget |
+| `/cbm disable` | entfernt **nur** den eigenen Eintrag; der Index bleibt erhalten |
+
+**Im Workflow:** in RESEARCH *vor* der breiten Dateisuche — `get_architecture` → `search_graph` → `trace_path`, **dann** gezielt Dateien lesen. Der Graph sagt dir, *welche* Dateien relevant sind; er ersetzt das Lesen nicht und ist kein Korrektheitsbeweis (das bleiben Tests und Build).
+
+**Zwei Fallstricke, die still danebengehen:**
+
+- `search_graph.file_pattern` ist ein **Literal-Substring**, `name_pattern` dagegen eine **Regex**. Eine Regex im `file_pattern` (`.*\.tsx$`) liefert kommentarlos `total=0` — was leicht als „gibt es nicht" fehlgedeutet wird. Richtig: `.tsx`.
+- Nur **8 der 14** Tools aus dem README sind über MCP erreichbar. `detect_changes`, `list_projects`, `delete_project`, `manage_adr`, `ingest_traces`, `index_status` gibt es nur über die CLI.
+
+Ein leerer Call-Graph ist normal (dynamische Aufrufe, DI, Callbacks, Reflection) → Fallback: LSP → Grep → mgrep → Datei lesen, und die Unsicherheit benennen. Details: `bestpractice-extras/scripts/cbm/README.md`.
 
 ### mgrep — semantische Suche (~50 % weniger Token)
 
@@ -406,7 +434,7 @@ Kernhaltung: Baue so, als würde das Modell irgendwann etwas Feindliches lesen, 
 
 ```
 # Plugin-Pfad (Single Source, read-only behandeln):
-ECC=~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1
+ECC=~/.claude/plugins/cache/ecc/ecc/2.0.0
 
 node "$ECC/scripts/harness-audit.js"   # Repo-Integritäts-Audit
 node "$ECC/scripts/ecc.js" doctor      # Health-Check
@@ -467,7 +495,7 @@ Für vage/vielschichtige Ziele: holt mehrere read-only Experten-Perspektiven par
 
 Die Migration auf **Plugin-only** ist abgeschlossen (Commits `d99f3d0` + `8293011`):
 
-- **ECC-Core = globales Plugin** `ecc@ecc` 2.0.0-rc.1, gepinnt auf GitHub `affaan-m/ECC` Tag `v2.0.0-rc.1` (`extraKnownMarketplaces` in `~/.claude/settings.json`). Vendored `ecc/` im Repo und der 213-MB-Klon `/root/projekte/ECC` sind gelöscht.
+- **ECC-Core = globales Plugin** `ecc@ecc` 2.0.0, gepinnt auf GitHub `affaan-m/ECC` Tag `v2.0.0` (`extraKnownMarketplaces` in `~/.claude/settings.json`). Vendored `ecc/` im Repo und der 213-MB-Klon `/root/projekte/ECC` sind gelöscht.
 - **ECC-Duplikate im Home entfernt:** globale Rules- (117 Dateien, verursachten Auto-Compact), Hooks- und Skills-Kopien sind weg — das Plugin liefert alles. Geblieben: 3 Schicht-2-Command-Symlinks (`start`, `mega-plan`, `ecc-onboard`), `skills/learned`, `skills/system-architektur`, `rules/ecc-extras/`.
 - **Abgelöst (Plugins auf `false`):** claude-mem → memory-MCP + Instincts + /save-session · superpowers → ECC-Workflows · context7@official + feature-dev → ECC-Pendants. ⚠️ Greift erst nach **Neustart von Claude Code**.
 - **Hook-Scope:** global `minimal` + `ECC_GATEGUARD=off`; onboarded Projekte lokal `standard` (BestPractice, Werkstattauftraege_codex, Grow3_Automatisierung, Test-ECC, Verladelisten_Hafen). Eigenbau-`hooks.py` aus Werkstatt/WMS_Test entfernt.
@@ -477,7 +505,7 @@ Die Migration auf **Plugin-only** ist abgeschlossen (Commits `d99f3d0` + `829301
 
 ## 21 · Quellen & TL;DR
 
-**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Plugin-Cache `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`):
+**Original-Guides von @affaanmustafa** (als X-Threads veröffentlicht; lokal im Plugin-Cache `~/.claude/plugins/cache/ecc/ecc/2.0.0/`):
 
 - **Shortform-Guide:** https://x.com/affaanmustafa/status/2012378465664745795 (`the-shortform-guide.md`) — Setup & Philosophie
 - **Longform-Guide:** https://x.com/affaanmustafa/status/2014040193557471352 (`the-longform-guide.md`) — Token, Memory, Evals, Parallelisierung

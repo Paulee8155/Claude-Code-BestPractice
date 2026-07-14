@@ -5,7 +5,7 @@
 > welche Agenten / Skills / Commands / Hooks existieren, wie alles zusammenhängt und was
 > passiert, wenn du das System in einem neuen Projekt einrichtest.
 >
-> **Stand:** 2026-06-10 · ECC läuft als **globales Plugin** `ecc@ecc` 2.0.0-rc.1 (gepinnt
+> **Stand:** 2026-06-10 · ECC läuft als **globales Plugin** `ecc@ecc` 2.0.0 (gepinnt
 > auf Upstream `affaan-m/ECC`, 63 Agenten, 249 Skills, 79 Commands, 29 Hooks) — plus deine
 > eigenen Erweiterungen (Schicht 2) und das Schicht-2-Tooling (mgrep, LSP-Plugins).
 > Seit der **Plugin-only-Migration (2026-06-10)** gibt es keine vendored `ecc/`-Kopie mehr;
@@ -56,7 +56,7 @@ Dein System besteht aus **drei sauber getrennten Schichten**:
 │  → steuert ECC nur über dessen reguläre Schnittstellen     │
 ├─────────────────────────────────────────────────────────────┤
 │  SCHICHT 1 — ECC-Core (globales Plugin, NIE verändert)     │
-│  ~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/               │
+│  ~/.claude/plugins/cache/ecc/ecc/2.0.0/               │
 │  → 63 Agenten · 249 Skills · 79 Commands · 29 Hooks        │
 │  → + 6 mitgebrachte MCP-Server (memory, context7, github,  │
 │    exa, playwright, sequential-thinking)                    │
@@ -66,7 +66,7 @@ Dein System besteht aus **drei sauber getrennten Schichten**:
 **Die goldene Regel deines Setups:** Schicht 1 (das Plugin) wird **niemals** angefasst.
 Seit der Plugin-only-Migration (2026-06-10) gibt es keine vendored `ecc/`-Kopie im Repo
 mehr — ECC lebt ausschließlich als globales Plugin `ecc@ecc`, gepinnt auf den Upstream-Tag
-`v2.0.0-rc.1` (GitHub `affaan-m/ECC`). Verhalten änderst du nur über Env-Vars
+`v2.0.0` (GitHub `affaan-m/ECC`). Verhalten änderst du nur über Env-Vars
 (`ECC_HOOK_PROFILE`, `ECC_GATEGUARD`) und Schicht 2. Dadurch kannst du ECC jederzeit auf
 einen neueren Upstream-Tag heben (Eintrag in `~/.claude/settings.json` →
 `extraKnownMarketplaces.ecc.source.ref` ändern), ohne deine Erweiterungen zu verlieren.
@@ -140,7 +140,7 @@ Wenn du nur 5 Minuten hast — das ist die ungenutzte Power, die du sofort abruf
 ## 4. Die Repo-Struktur
 
 Der ECC-Werkzeugkasten liegt seit der Migration unter
-`~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/` (globales Plugin, read-only behandeln).
+`~/.claude/plugins/cache/ecc/ecc/2.0.0/` (globales Plugin, read-only behandeln).
 Jeder Ordner hat eine klare Aufgabe.
 
 | Ordner | Was drin ist und wofür |
@@ -417,7 +417,7 @@ selbst aktiviert.
 | 18 | Sonstige Fachbereiche | ~10 | `recursive-decision-ledger`, `iterative-retrieval`, `parallel-execution-optimizer`, `search-first` |
 
 > Die vollständige Skill-Liste mit Einzel-Beschreibungen liegt im Plugin unter
-> `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/skills/<name>/SKILL.md`.
+> `~/.claude/plugins/cache/ecc/ecc/2.0.0/skills/<name>/SKILL.md`.
 > Per `/ecc-guide` oder `skill-scout` durchsuchbar.
 
 > **Die 12 wertvollsten Skills** sind oben im [Schnellstart](#3-schnellstart) gelistet.
@@ -737,15 +737,15 @@ verändert, der Wrapper steuert ECC nur über dessen reguläre Hooks und Slash-C
 | **RPI-Berater** | Deine 4 read-only Advisor (Intake, CTO, Product, UX) vor der Planung. |
 | **Idempotent** | Mehrfaches Ausführen schadet nicht — es wird nur ergänzt, nichts doppelt. |
 | **Vendored** | Eine Kopie einer Abhängigkeit liegt fest im Repo. ECC **war** bis 2026-06-10 vendored (`ecc/`-Ordner) — heute läuft es als globales Plugin. |
-| **Plugin** | In Claude Code installierte Erweiterung. ECC-Core = Plugin `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0-rc.1`, Cache unter `~/.claude/plugins/cache/ecc/`. |
+| **Plugin** | In Claude Code installierte Erweiterung. ECC-Core = Plugin `ecc@ecc`, gepinnt auf Upstream-Tag `v2.0.0`, Cache unter `~/.claude/plugins/cache/ecc/`. |
 
 ## 15. Aktivierungs-Status (Stand 2026-06-10)
 
 Die **Plugin-only-Migration** ist abgeschlossen (Commits `d99f3d0` + `8293011`):
 
-- **ECC-Core = globales Plugin.** `ecc@ecc` 2.0.0-rc.1, gepinnt via
-  `extraKnownMarketplaces.ecc` auf GitHub `affaan-m/ECC` Tag `v2.0.0-rc.1`. Cache:
-  `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1/`. Die vendored Kopie `ecc/` im Repo und der
+- **ECC-Core = globales Plugin.** `ecc@ecc` 2.0.0, gepinnt via
+  `extraKnownMarketplaces.ecc` auf GitHub `affaan-m/ECC` Tag `v2.0.0`. Cache:
+  `~/.claude/plugins/cache/ecc/ecc/2.0.0/`. Die vendored Kopie `ecc/` im Repo und der
   213-MB-Klon `/root/projekte/ECC` sind **gelöscht**.
 - **ECC-Duplikate im Home entfernt:** globale Rules-/Hooks-/Skills-Kopien unter `~/.claude/`
   sind weg (das Plugin liefert sie). Geblieben: 3 Schicht-2-Symlinks (`start`, `mega-plan`,

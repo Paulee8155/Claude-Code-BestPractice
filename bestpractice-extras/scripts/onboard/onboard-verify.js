@@ -84,6 +84,85 @@ function engineSandbox() {
   }
 }
 
+/**
+ * Codebase Memory ist optional. Ist es im Projekt NICHT aktiviert, gibt es keinen
+ * Pflichtfehler — nur einen neutralen Hinweis. Ist es aktiviert, wird es voll geprüft.
+ */
+function verifyCbm(root, globalSettings) {
+  const CBM_DIR = path.join(__dirname, '..', 'cbm');
+  let mcpConfig;
+  let cbmignore;
+  let cbmVerify;
+  let cbmProject;
+  try {
+    mcpConfig = require(path.join(CBM_DIR, 'mcp-config'));
+    cbmignore = require(path.join(CBM_DIR, 'cbmignore'));
+    cbmVerify = require(path.join(CBM_DIR, 'verify'));
+    cbmProject = require(path.join(CBM_DIR, 'project'));
+  } catch (e) {
+    warnc('12 CBM-Skripte ladbar', false, e.message);
+    return;
+  }
+
+  const mcpFile = path.join(root, '.mcp.json');
+  let mcpJson = null;
+  let mcpValid = true;
+  if (exists(mcpFile)) {
+    try { mcpJson = mcpConfig.readMcp(mcpFile).json; } catch { mcpValid = false; }
+  }
+
+  if (!mcpConfig.isEnabled(root)) {
+    // Kaputte .mcp.json ist auch ohne CBM ein echter Befund.
+    if (!mcpValid) check('12 .mcp.json ist gültiges JSON', false, `${mcpFile} nicht parsebar`);
+    else warnc('12 CBM (Codebase Memory)', true, 'optional nicht aktiviert — /cbm enable');
+    return;
+  }
+
+  // --- Ab hier ist CBM aktiviert → alles Pflicht ---
+  check('12a .mcp.json ist gültiges JSON', mcpValid);
+  if (!mcpValid) return;
+
+  const servers = Object.keys((mcpJson && mcpJson.mcpServers) || {});
+  const cbmEntries = servers.filter((s) => s === mcpConfig.SERVER_KEY || /codebase[-_]memory/i.test(s));
+  check('12b genau EIN codebase-memory-Eintrag', cbmEntries.length === 1, `gefunden: ${cbmEntries.join(', ') || 'keiner'}`);
+  check('12c command = codebase-memory-mcp-harness',
+    mcpJson.mcpServers[mcpConfig.SERVER_KEY] &&
+    mcpJson.mcpServers[mcpConfig.SERVER_KEY].command === mcpConfig.SERVER_COMMAND);
+
+  const g = cbmVerify.verifyGlobal();
+  const gFails = g.filter((c) => c.mandatory && !c.ok);
+  check('12d globale CBM-Installation grün (Binary + Wrapper)', gFails.length === 0,
+    gFails.length ? gFails.map((c) => c.label).join('; ') : '');
+
+  check('12e .cbmignore enthält den vollständigen Managed Block', cbmignore.isCurrent(root));
+
+  const pc = cbmProject.checkPath(root);
+  check('12f Projekt liegt innerhalb CBM_ALLOWED_ROOT', pc.ok, pc.ok ? pc.root : pc.reason.split('\n').join(' '));
+
+  const indexed = pc.ok ? cbmProject.indexedProject(root) : null;
+  check('12g Projekt ist indexiert', !!indexed, indexed ? `${indexed.name} (${indexed.nodes} Knoten)` : 'nicht indexiert — /cbm reindex');
+
+  if (indexed) {
+    const schema = cbmVerify.cli('get_graph_schema', { project: indexed.name }, 60000);
+    check('12h get_graph_schema funktioniert',
+      schema.ok && Array.isArray(schema.data.node_labels) && schema.data.node_labels.length > 0,
+      schema.ok ? `${(schema.data.node_labels || []).length} Labels` : 'CLI-Fehler');
+
+    const arch = cbmVerify.cli('get_architecture', { project: indexed.name, aspects: ['all'] }, 60000);
+    check('12i Architekturabfrage liefert ein valides Ergebnis',
+      arch.ok && arch.data.total_nodes > 0,
+      arch.ok ? `${arch.data.total_nodes} Knoten / ${arch.data.total_edges} Kanten` : 'CLI-Fehler');
+  }
+
+  // Negativ-Kriterien: CBM darf das globale Setup nicht angefasst haben.
+  const gsRaw = read(GLOBAL_SETTINGS);
+  check('12j kein Upstream-Grep/Glob-Hook installiert',
+    !/codebase-memory|cbm-code-discovery-gate/i.test(JSON.stringify((globalSettings && globalSettings.hooks) || {})));
+  check('12k ~/.claude/settings.json wurde nicht durch CBM verändert', !/codebase-memory/i.test(gsRaw));
+  check('12l RTK-Hook weiterhin vorhanden (CBM hat ihn nicht verdrängt)',
+    /rtk hook claude/.test(JSON.stringify((globalSettings && globalSettings.hooks && globalSettings.hooks.PreToolUse) || [])));
+}
+
 function findAudit() {
   const baseDir = path.join(HOME, '.claude', 'plugins', 'cache', 'ecc', 'ecc');
   if (!exists(baseDir)) return null;
@@ -124,9 +203,11 @@ function main() {
   check('4 globaler state-sync-Hook + Engine ausführbar', hookOk && exists(GLOBAL_ENGINE) && engineRuns);
 
   // 6) keine Altlasten (außerhalb .harness-backup/)
+  // Root-AGENTS.md/.codex/.agents sind Codex-Projektwahrheit, keine Altlast — nur
+  // die .claude/-Dumps des alten Installers zaehlen. Siehe onboard.js decruftTargets().
   const cruft = ['.claude/rules/ecc', '.claude/skills/ecc', '.claude/ecc', '.claude/plugin.json',
     '.claude/marketplace.json', '.claude/AGENTS.md', '.claude/PLUGIN_SCHEMA_NOTES.md', '.claude/.agents',
-    'AGENTS.md', '.codex', '.superpowers'].filter((c) => exists(path.join(root, c)));
+    '.superpowers'].filter((c) => exists(path.join(root, c)));
   check('6 keine vendored ECC-Altlasten', cruft.length === 0, cruft.length ? `gefunden: ${cruft.join(', ')}` : '');
   const ECC_MCP = ['memory', 'context7', 'exa', 'playwright', 'github', 'sequential-thinking'];
   const mcp = readJSON(path.join(root, '.mcp.json'));
@@ -156,6 +237,9 @@ function main() {
   const envIgnored = gi.some((l) => l === '.env' || l === '.env.*' || l === '*.env');
   const syncIgnored = gi.includes('state/.sync/');
   check('11 Secret-Hygiene (.env + state/.sync/ ignoriert)', envIgnored && syncIgnored);
+
+  // 12) Codebase Memory — dynamisch: Pflicht NUR, wenn im Projekt aktiviert.
+  verifyCbm(root, gs);
 
   // 10) harness-audit (Report-only, nicht-fatal)
   if (audit) {

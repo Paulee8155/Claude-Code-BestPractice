@@ -18,7 +18,7 @@
 
 ## Architektur (zwei Schichten)
 
-- Schicht 1 — ECC-Core: globales Plugin unter `~/.claude/plugins/cache/ecc/ecc/2.0.0-rc.1`. Nicht vendoren, nicht patchen.
+- Schicht 1 — ECC-Core: globales Plugin unter `~/.claude/plugins/cache/ecc/ecc/2.0.0`. Nicht vendoren, nicht patchen.
 - Schicht 2 — `bestpractice-extras/`: eigene agents/commands/rules/templates + `scripts/` (state-sync, onboard, mgrep, build-docs).
 
 ## Kernkomponenten
