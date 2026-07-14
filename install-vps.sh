@@ -22,6 +22,14 @@
 #   ./install-vps.sh                 # Rules aus Plugin-Cache + BP-Extras layern
 #   ./install-vps.sh --harden        # zusätzlich deny-Sicherheitsbasis in settings.json (opt-in)
 #   ./install-vps.sh --dry-run       # nur zeigen, was kopiert würde
+#   ./install-vps.sh --with-cbm      # zusätzlich Codebase-Memory-MCP global installieren (opt-in)
+#   ./install-vps.sh --cbm-verify        # nur die CBM-Installation prüfen (read-only)
+#   ./install-vps.sh --cbm-check-update  # nur auf neue CBM-Release prüfen (read-only)
+#
+# Codebase Memory (CBM):
+#   Die Binary wird VPS-weit EINMAL installiert, der MCP-Server aber NIE global
+#   registriert — Projekte aktivieren ihn einzeln via /cbm enable. Ohne --with-cbm
+#   verhält sich dieses Skript exakt wie vorher.
 
 set -euo pipefail
 
@@ -29,16 +37,28 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXTRAS_DIR="$REPO_DIR/bestpractice-extras"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 PLUGIN_DIR="${ECC_PLUGIN_DIR:-$CLAUDE_HOME/plugins/cache/ecc/ecc/2.0.0}"
+CBM_MANAGE="$EXTRAS_DIR/scripts/cbm/manage.sh"
 
 DRY_RUN=0
 HARDEN=0
+WITH_CBM=0
+CBM_ONLY=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dry-run) DRY_RUN=1; shift ;;
-    --harden)  HARDEN=1; shift ;;
+    --dry-run)          DRY_RUN=1; shift ;;
+    --harden)           HARDEN=1; shift ;;
+    --with-cbm)         WITH_CBM=1; shift ;;
+    --cbm-verify)       CBM_ONLY="verify"; shift ;;
+    --cbm-check-update) CBM_ONLY="check-update"; shift ;;
     *) echo "Unbekannte Option: $1"; exit 1 ;;
   esac
 done
+
+# Read-only CBM-Einzelaktionen: laufen allein und fassen das restliche Harness nicht an.
+if [ -n "$CBM_ONLY" ]; then
+  [ -f "$CBM_MANAGE" ] || { echo "[VPS] FEHLER: $CBM_MANAGE fehlt." >&2; exit 1; }
+  exec bash "$CBM_MANAGE" "$CBM_ONLY"
+fi
 
 echo "[VPS] Repo:          $REPO_DIR"
 echo "[VPS] Plugin (Quelle): $PLUGIN_DIR"
@@ -83,6 +103,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "[VPS] DRY-RUN — würde kopieren: $PLUGIN_DIR/rules/ → $CLAUDE_HOME/rules/ecc/"
   echo "[VPS] DRY-RUN — würde Extras layern (siehe Schritt 2)."
   echo "[VPS] DRY-RUN — würde Codex-Regeln layern: codex-delegation.md, codex-capacity.md"
+  if [ "$WITH_CBM" -eq 1 ]; then
+    echo ""
+    echo "[VPS] DRY-RUN — Codebase Memory (--with-cbm):"
+    echo "[VPS]   würde verteilen: /cbm → $CLAUDE_HOME/commands/cbm.md"
+    echo "[VPS]   würde verteilen: Skill → $CLAUDE_HOME/skills/cbm-code-intelligence/SKILL.md"
+    bash "$CBM_MANAGE" dry-run | sed 's/^/[VPS]   /'
+  fi
   exit 0
 fi
 echo "[VPS] Verteile Rules aus Plugin-Cache → ~/.claude/rules/ecc ..."
@@ -92,8 +119,11 @@ cp -R "$PLUGIN_DIR/rules/." "$CLAUDE_HOME/rules/ecc/"
 # 2) BestPractice-Extras layern (Schicht 2: Karpathy + /ecc-onboard + /mega-plan + /start)
 echo "[VPS] Layere BestPractice-Extras..."
 mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/rules/ecc-extras" "$CLAUDE_HOME/agents" "$CLAUDE_HOME/contexts"
-cp "$EXTRAS_DIR/commands/ecc-onboard.md"       "$CLAUDE_HOME/commands/"
-cp "$EXTRAS_DIR/commands/mega-plan.md"         "$CLAUDE_HOME/commands/"
+# Die Commands sind hier als Symlinks ins Repo verankert (Single Source, kein Drift).
+# Ein cp auf sich selbst schlägt fehl und würde das Skript per set -e abbrechen — der
+# -ef-Guard überspringt genau diesen Fall (wie bei start.md schon länger üblich).
+[ "$EXTRAS_DIR/commands/ecc-onboard.md" -ef "$CLAUDE_HOME/commands/ecc-onboard.md" ] || cp "$EXTRAS_DIR/commands/ecc-onboard.md" "$CLAUDE_HOME/commands/"
+[ "$EXTRAS_DIR/commands/mega-plan.md"   -ef "$CLAUDE_HOME/commands/mega-plan.md"   ] || cp "$EXTRAS_DIR/commands/mega-plan.md"   "$CLAUDE_HOME/commands/"
 cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/attribution-policy.md"   "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/codex-delegation.md"     "$CLAUDE_HOME/rules/ecc-extras/"
@@ -129,6 +159,36 @@ s.permissions.deny = [...set];
 fs.writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
 console.log('[VPS] deny-Baseline gesetzt (' + s.permissions.deny.length + ' Einträge). RTK-Hook erhalten.');
 NODE
+fi
+
+# 4) Codebase Memory (opt-in) — Binary global, MCP bleibt projektlokal.
+if [ "$WITH_CBM" -eq 1 ]; then
+  echo ""
+  echo "[VPS] Codebase Memory (--with-cbm):"
+  [ -f "$CBM_MANAGE" ] || { echo "[VPS] FEHLER: $CBM_MANAGE fehlt — Repo unvollständig ausgecheckt?" >&2; exit 1; }
+
+  # Schicht-2-Komponenten verteilen (kollisionsfreier cbm-Namensraum).
+  mkdir -p "$CLAUDE_HOME/commands" "$CLAUDE_HOME/skills/cbm-code-intelligence"
+  [ "$EXTRAS_DIR/commands/cbm.md" -ef "$CLAUDE_HOME/commands/cbm.md" ] || cp "$EXTRAS_DIR/commands/cbm.md" "$CLAUDE_HOME/commands/"
+  [ "$EXTRAS_DIR/skills/cbm-code-intelligence/SKILL.md" -ef "$CLAUDE_HOME/skills/cbm-code-intelligence/SKILL.md" ] \
+    || cp "$EXTRAS_DIR/skills/cbm-code-intelligence/SKILL.md" "$CLAUDE_HOME/skills/cbm-code-intelligence/"
+  echo "[VPS]   verteilt: /cbm + Skill cbm-code-intelligence"
+
+  if ! bash "$CBM_MANAGE" install; then
+    echo "[VPS] FEHLER: CBM-Installation fehlgeschlagen — es wird NICHT still weitergemacht." >&2
+    echo "[VPS] Nächster Schritt: 'bash $CBM_MANAGE dry-run' zeigt den Plan," >&2
+    echo "[VPS]   'bash $CBM_MANAGE status' den Ist-Zustand. Bestehende Installation" >&2
+    echo "[VPS]   ggf. zurückrollen: 'bash $CBM_MANAGE rollback'." >&2
+    exit 1
+  fi
+  if ! bash "$CBM_MANAGE" verify; then
+    echo "[VPS] FEHLER: CBM-Verifikation rot — Installation nicht abnahmefähig." >&2
+    echo "[VPS] Nächster Schritt: obigen FAIL lesen, dann 'bash $CBM_MANAGE install' erneut" >&2
+    echo "[VPS]   oder 'bash $CBM_MANAGE rollback'." >&2
+    exit 1
+  fi
+  echo "[VPS]   CBM global installiert + verifiziert. MCP ist noch in KEINEM Projekt aktiv."
+  echo "[VPS]   Aktivieren je Projekt: /cbm enable  (oder /ecc-onboard --with-cbm)"
 fi
 
 echo "[VPS] Fertig. Single Source = globales Plugin. Hook-Profil via ECC_HOOK_PROFILE (docs/WO-LAEUFT-WAS.md)."
