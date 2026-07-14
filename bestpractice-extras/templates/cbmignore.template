@@ -1,0 +1,43 @@
+# BEGIN ECC-CBM MANAGED
+# Von /cbm enable gepflegt. Änderungen INNERHALB dieses Blocks werden beim
+# nächsten Lauf überschrieben — eigene Regeln bitte AUSSERHALB der Marker.
+#
+# Ergänzt (nicht ersetzt) die .gitignore-Hierarchie: CBM wendet zuerst harte
+# Defaults (.git, node_modules) an, dann .gitignore, dann diese Datei.
+# .gitignore bleibt maßgeblich. Bewusst KEINE Re-Include-Regeln (!pattern) —
+# die könnten .gitignore-Ausschlüsse oder Sicherheitsfilter aushebeln.
+
+# Secrets und Schlüssel — dürfen nie in den Codegraphen
+.env
+.env.*
+*.env
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Laufzeit- und Nutzerdaten — kein Code, potenziell personenbezogen
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+backups/
+logs/
+
+# Build- und Testartefakte — generiert, verzerren Hotspots und Blast Radius
+coverage/
+playwright-report/
+test-results/
+dist/
+build/
+
+# Harness-Zustand ist kein Codegraph
+.harness-backup/
+state/
+state/.sync/
+WORKING-CONTEXT.md
+
+# Generierte Architektur-Snapshots nicht erneut indexieren
+docs/CODEMAPS/
+# END ECC-CBM MANAGED
