@@ -222,6 +222,106 @@ t('Managed Block enthält keine Re-Include-Regeln', () => {
 });
 
 // =================================================================================
+process.stdout.write('\n--- CLAUDE.md: bedingte CBM-Projektregel ---\n');
+// =================================================================================
+
+const claudeMd = require('./claude-md');
+
+const CLAUDE_FIXTURE = [
+  '# CLAUDE.md — Arbeitsvertrag (Demo)',
+  '',
+  '## Pflicht-Workflow (ECC 5-Phasen, jede Aufgabe > 30 Min)',
+  '1. RESEARCH → Explore/Codebase verstehen',
+  '5. VERIFY → Tests/Build grün',
+  '',
+  '## Stack & Befehle',
+  '- Build: `npm run build`',
+  '',
+  '## Design-Disziplin',
+  '- Nur Oswald + Open Sans.',
+  '',
+].join('\n');
+
+t('fehlende CLAUDE.md → wird mit dem Block angelegt', () => {
+  const r = tmp('cmd1');
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'create');
+  const txt = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  assert.ok(txt.includes('## Codebase Memory'));
+  assert.ok(/Wenn `codebase-memory` in diesem Projekt verfügbar ist/.test(txt), 'Regel ist BEDINGT formuliert');
+  assert.ok(claudeMd.isCurrent(r));
+});
+
+t('bestehende CLAUDE.md: Block landet nach dem Pflicht-Workflow, alles andere bleibt', () => {
+  const r = tmp('cmd2');
+  write(path.join(r, 'CLAUDE.md'), CLAUDE_FIXTURE);
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'add');
+  const txt = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  const iWf = txt.indexOf('## Pflicht-Workflow');
+  const iCbm = txt.indexOf('## Codebase Memory');
+  const iStack = txt.indexOf('## Stack & Befehle');
+  assert.ok(iWf < iCbm && iCbm < iStack, 'CBM steht zwischen Pflicht-Workflow und Stack');
+  for (const keep of ['## Stack & Befehle', '- Build: `npm run build`', '## Design-Disziplin', '- Nur Oswald + Open Sans.']) {
+    assert.ok(txt.includes(keep), `Projektinhalt verloren: ${keep}`);
+  }
+});
+
+t('wiederholtes Onboarding → No-op, keine doppelten Abschnitte', () => {
+  const r = tmp('cmd3');
+  write(path.join(r, 'CLAUDE.md'), CLAUDE_FIXTURE);
+  claudeMd.apply(r, { apply: true });
+  const after1 = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'noop');
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'noop');
+  const after3 = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  assert.strictEqual(after3, after1, 'Datei bleibt byte-identisch');
+  assert.strictEqual(after3.split('## Codebase Memory').length - 1, 1, 'genau EIN CBM-Abschnitt');
+  assert.strictEqual(after3.split(claudeMd.START).length - 1, 1, 'genau EIN Marker-Paar');
+});
+
+t('veralteter Block wird ersetzt — nur zwischen den Markern', () => {
+  const r = tmp('cmd4');
+  write(path.join(r, 'CLAUDE.md'),
+    `# Titel\n\n${claudeMd.START}\n## Codebase Memory\nVERALTET\n${claudeMd.END}\n\n## Stack\n- eigen\n`);
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'update');
+  const txt = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  assert.ok(!txt.includes('VERALTET'));
+  assert.ok(txt.includes('# Titel') && txt.includes('## Stack') && txt.includes('- eigen'), 'Fremdinhalt bleibt');
+  assert.ok(txt.includes('/cbm reindex'));
+});
+
+t('CLAUDE.md ohne Pflicht-Workflow → Block wird angehängt, nichts überschrieben', () => {
+  const r = tmp('cmd5');
+  write(path.join(r, 'CLAUDE.md'), '# Fremdes Projekt\n\n## Regeln\n- eigene Regel\n');
+  assert.strictEqual(claudeMd.apply(r, { apply: true }).action, 'add');
+  const txt = fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8');
+  assert.ok(txt.startsWith('# Fremdes Projekt\n\n## Regeln\n- eigene Regel\n'), 'Original bleibt vorn unverändert');
+  assert.ok(txt.includes('## Codebase Memory'));
+});
+
+t('beschädigte Marker → fail-closed, Datei unverändert', () => {
+  const r = tmp('cmd6');
+  const f = path.join(r, 'CLAUDE.md');
+  const broken = `# Titel\n${claudeMd.START}\n## Codebase Memory\n`;   // START ohne END
+  write(f, broken);
+  assert.throws(() => claudeMd.apply(r, { apply: true }), /beschädigt/);
+  assert.strictEqual(fs.readFileSync(f, 'utf8'), broken);
+});
+
+t('dry-run (apply:false) schreibt nichts', () => {
+  const r = tmp('cmd7');
+  write(path.join(r, 'CLAUDE.md'), CLAUDE_FIXTURE);
+  assert.strictEqual(claudeMd.apply(r, { apply: false }).action, 'add');
+  assert.strictEqual(fs.readFileSync(path.join(r, 'CLAUDE.md'), 'utf8'), CLAUDE_FIXTURE, 'unverändert');
+});
+
+t('die Regel aktiviert nichts: kein .mcp.json, keine .cbmignore', () => {
+  const r = tmp('cmd8');
+  claudeMd.apply(r, { apply: true });
+  assert.strictEqual(fs.existsSync(path.join(r, '.mcp.json')), false);
+  assert.strictEqual(fs.existsSync(path.join(r, '.cbmignore')), false);
+});
+
+// =================================================================================
 process.stdout.write('\n--- Pfadsicherheit (CBM_ALLOWED_ROOT) ---\n');
 // =================================================================================
 

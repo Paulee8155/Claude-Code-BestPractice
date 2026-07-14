@@ -128,10 +128,13 @@ cp "$EXTRAS_DIR/rules/karpathy-principles.md"  "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/attribution-policy.md"   "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/codex-delegation.md"     "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/rules/codex-capacity.md"       "$CLAUDE_HOME/rules/ecc-extras/"
+# Bedingte Regel („nur wenn codebase-memory im Projekt verfügbar ist") — darum immer
+# verteilt, auch ohne --with-cbm: sie aktiviert nichts und kostet ohne CBM nichts.
+cp "$EXTRAS_DIR/rules/cbm-workflow.md"         "$CLAUDE_HOME/rules/ecc-extras/"
 cp "$EXTRAS_DIR/agents/rpi-"*.md               "$CLAUDE_HOME/agents/"
 [ "$EXTRAS_DIR/commands/start.md" -ef "$CLAUDE_HOME/commands/start.md" ] || cp "$EXTRAS_DIR/commands/start.md" "$CLAUDE_HOME/commands/"
 if [ -d "$EXTRAS_DIR/contexts" ]; then cp "$EXTRAS_DIR/contexts/"*.md "$CLAUDE_HOME/contexts/" 2>/dev/null || true; fi
-echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, /start, karpathy + attribution, rpi-Advisors."
+echo "[VPS] Extras gelayert: /ecc-onboard, /mega-plan, /start, karpathy + attribution, cbm-workflow, rpi-Advisors."
 
 # 3) Optionale Härtung (opt-in) — ändert settings.json additiv, immer mit Backup
 if [ "$HARDEN" -eq 1 ]; then

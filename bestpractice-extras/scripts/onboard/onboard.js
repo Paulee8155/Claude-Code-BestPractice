@@ -37,6 +37,7 @@ const HARVEST = path.join(EXTRAS, 'scripts', 'context-harvest', 'harvest.js');
 const STATE_SYNC = path.join(EXTRAS, 'scripts', 'state-sync', 'state-sync.js');
 const VERIFY = path.join(ONBOARD_DIR, 'onboard-verify.js');
 const CBM_PROJECT = path.join(EXTRAS, 'scripts', 'cbm', 'project.js');
+const cbmClaudeMd = require(path.join(EXTRAS, 'scripts', 'cbm', 'claude-md.js'));
 const CBM_WRAPPER = path.join(process.env.HOME || '/root', '.local', 'bin', 'codebase-memory-mcp-harness');
 const GLOBAL_ENGINE = path.join(process.env.HOME || '/root', '.claude', 'state-sync', 'state-sync.js');
 const GLOBAL_SETTINGS = path.join(process.env.HOME || '/root', '.claude', 'settings.json');
@@ -315,6 +316,8 @@ function main() {
     log(`  ${set.action.padEnd(7)} ${set.path}${set.stripped ? `  (− ${set.stripped} state-sync-Hook-Gruppe(n))` : ''}`);
     planState(root, false).forEach((a) => log(`  ${a.action.padEnd(7)} ${a.path}`));
     planDocs(root, false).forEach((a) => log(`  ${a.action.padEnd(7)} ${a.path}`));
+    const cbmRule = cbmClaudeMd.apply(root, { apply: false });
+    log(`  ${cbmRule.action.padEnd(7)} CLAUDE.md → Abschnitt "Codebase Memory" (bedingt; aktiviert nichts)`);
     const gi = planGitignore(root, false);
     log(`  ${gi.action.padEnd(7)} ${gi.path}`);
     log('  create  .claude/memory.md, SECURITY.md, .gitignore-Secrets  (consumer-scaffold)');
@@ -345,6 +348,9 @@ function main() {
   log(`  ${set.action} .claude/settings.json${set.stripped ? `  (− ${set.stripped} state-sync-Hook-Gruppe(n))` : ''}`);
   planState(root, true).forEach((a) => log(`  ${a.action} ${a.path}`));
   planDocs(root, true).forEach((a) => log(`  ${a.action} ${a.path}`));
+  // Bedingte CBM-Projektregel — additiv, idempotent, aktiviert NICHTS.
+  const cbmRule = cbmClaudeMd.apply(root, { apply: true });
+  log(`  ${cbmRule.action} CLAUDE.md → Abschnitt "Codebase Memory"`);
   const gi = planGitignore(root, true);
   log(`  ${gi.action} ${gi.path}`);
 

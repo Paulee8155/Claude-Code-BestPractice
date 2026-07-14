@@ -9,19 +9,36 @@ CBM indexiert den **tatsächlichen Quellcode** in einen Graphen (Dateien, Klasse
 Funktionen, Routen, Aufrufkanten). Es ist ein Analysewerkzeug — **kein Gedächtnis,
 kein Projektstand und kein Beweis für Korrektheit.**
 
+> **Verbindlich ist die globale Regel** `~/.claude/rules/ecc-extras/cbm-workflow.md`.
+> Dieser Skill liefert die ausführliche **Methodik** dazu (Tool-Semantik, Fallstricke,
+> Grenzen). Bei Widersprüchen gilt die Regel, nicht der Skill.
+
+## ECC bleibt führend
+
+**ECC entscheidet, wann Research, Plan, Implementierung, Review und Verify stattfinden.**
+CBM unterstützt diese Phasen ausschließlich mit strukturellem Codewissen — es entsteht
+**kein paralleler Workflow**.
+
+CBM **ersetzt nicht**: `/plan` · `/feature-dev` · TDD · `/code-review` · sprachspezifische
+Reviewer · Tests · Build · LSP · Memory-MCP · `state/` · Codemaps.
+
 ## Wer weiß was (nicht verwechseln)
 
 | Quelle | Beantwortet |
 |---|---|
-| **Memory-MCP** | frühere Entscheidungen und Wissen aus vergangenen Sessions |
-| **`state/` + `WORKING-CONTEXT.md`** | aktueller Projektstand, offene Aufgaben |
-| **Codebase Memory** | tatsächliche Struktur des Quellcodes, *jetzt* |
-| **Codemaps** (`docs/CODEMAPS/`) | versionierte, menschenlesbare Architektur-Snapshots |
-| **LSP** | Echtzeit-Typen, Definitionen, Diagnosen |
-| **mgrep** | unscharfe, semantische Text- und Dokumentensuche |
+| **ECC** | den **Arbeitsprozess** — wann welche Phase, welcher Command, welches Gate |
+| **Codebase Memory** | aktuelle **Code-Struktur und Abhängigkeiten** |
+| **Memory-MCP** | frühere **Entscheidungen und Wissen** aus vergangenen Sessions |
+| **`state/` + `WORKING-CONTEXT.md`** | aktueller **Projektzustand**, offene Aufgaben |
+| **Codemaps** (`docs/CODEMAPS/`) | versionierte **Architektur-Dokumentation** |
+| **LSP** | **Typen** und Echtzeit-Diagnosen |
+| **mgrep** | semantische **Textsuche** |
 
 Fragen der Art „warum haben wir das so gebaut?" beantwortet **Memory**, nicht CBM.
 Fragen der Art „was ruft diese Funktion auf?" beantwortet **CBM**, nicht Memory.
+
+Bei **kleinen, eindeutig lokalen Änderungen** ist keine Graph-Abfrage nötig — Pflicht-
+Abfragen bei Trivialitäten sind Verschwendung.
 
 ## Aufruf
 
