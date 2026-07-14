@@ -12,6 +12,13 @@ else
   echo "  FAIL"; FAIL=1
 fi
 
+echo "== eval: cbm-selftest =="
+if node bestpractice-extras/scripts/cbm/selftest.js > /tmp/cbm-selftest.log 2>&1; then
+  echo "  PASS ($(grep -oE '[0-9]+/[0-9]+ Tests grün' /tmp/cbm-selftest.log | head -1))"
+else
+  echo "  FAIL"; cat /tmp/cbm-selftest.log; FAIL=1
+fi
+
 echo "== eval: harness-score (>= 30) =="
 AUDIT="$HOME/.claude/plugins/cache/ecc/ecc/2.0.0/scripts/harness-audit.js"
 if [ -f "$AUDIT" ]; then
